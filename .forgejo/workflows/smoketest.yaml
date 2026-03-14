@@ -127,3 +127,8 @@ jobs:
         run: |
           cd tests/02-basic-socket-mux
           ./run_test.sh
+
+      - name: Run pipe test
+        run: |
+          cd tests/03-pipe
+          ./run_test.sh
