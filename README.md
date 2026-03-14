@@ -5,6 +5,8 @@
 [![Open issues](https://codeberg.org/larchcone/circle-stdlib/badges/issues/open.svg)](https://codeberg.org/larchcone/circle-stdlib/issues?state=open)
 [![Closed issues](https://codeberg.org/larchcone/circle-stdlib/badges/issues/closed.svg)](https://codeberg.org/larchcone/circle-stdlib/issues?state=closed)
 
+![logo](circle-stdlib-logo.svg)
+
 ## Project Home
 
 This project moved from GitHub to **Codeberg**. 
