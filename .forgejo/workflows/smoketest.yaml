@@ -132,3 +132,8 @@ jobs:
         run: |
           cd tests/03-pipe
           ./run_test.sh
+
+      - name: Run netdb test
+        run: |
+          cd tests/04-netdb
+          ./run_test.sh
