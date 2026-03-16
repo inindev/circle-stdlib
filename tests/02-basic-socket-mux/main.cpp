@@ -58,8 +58,6 @@ namespace {
         return sockets;
     }
 
-#if 0
-    // TODO Test not working yet because of QEMU UDP problems.
     Sockets setup_udp_sockets()
     {
         Sockets sockets;
@@ -74,7 +72,6 @@ namespace {
 
         return sockets;
     }
-#endif
 }
 
 TEST_CASE("Basic select read/write test")
@@ -264,8 +261,6 @@ TEST_CASE("Basic poll read/write test")
     }
 }
 
-#if 0
-// TODO Test not working yet because of QEMU UDP problems
 TEST_CASE("Basic UDP sendto()/recvfrom() test")
 {
     Sockets sockets = setup_udp_sockets();
@@ -325,4 +320,3 @@ TEST_CASE("Basic UDP sendto()/recvfrom() test")
         REQUIRE(close(sock) >= 0);
     }
 }
-#endif

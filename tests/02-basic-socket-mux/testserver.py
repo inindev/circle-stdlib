@@ -1,6 +1,7 @@
 import socket
 import threading
 import sys
+import time
 
 START_PORT = 5000
 NUM_PORTS = 3
@@ -59,7 +60,6 @@ if __name__ == "__main__":
         
     print("Servers running. Press Ctrl+C to stop.")
     try:
-        while True:
-            pass
+        threading.Event().wait()
     except KeyboardInterrupt:
         sys.exit(0)
