@@ -31,7 +31,7 @@ struct Sockets
 };
 
 namespace {
-    Sockets setup_sockets()
+    Sockets setup_tcp_sockets()
     {
         Sockets sockets;
 
@@ -57,11 +57,26 @@ namespace {
 
         return sockets;
     }
+
+    Sockets setup_udp_sockets()
+    {
+        Sockets sockets;
+
+        for (auto &sock : sockets.sockets)
+        {
+            sock = socket(AF_INET, SOCK_DGRAM, 0);
+            REQUIRE(sock >= 0);
+
+            sockets.maxfd = std::max(sockets.maxfd, sock);
+        }
+
+        return sockets;
+    }
 }
 
 TEST_CASE("Basic select read/write test")
 {
-    Sockets sockets = setup_sockets();
+    Sockets sockets = setup_tcp_sockets();
 
     // Monitor all sockets for writability
     fd_set writefds;
@@ -127,13 +142,13 @@ TEST_CASE("Basic select read/write test")
     }
 }
 
-TEST_CASE("Basic sendto()/recvfrom() read/write test")
+TEST_CASE("Basic sendto()/recvfrom() TCP read/write test")
 {
-    Sockets sockets = setup_sockets();
+    Sockets sockets = setup_tcp_sockets();
 
     // Test sendto() and recvfrom() in TCP mode (should ignore address parameters)
     constexpr char test_msg[] = "Test message via sendto/recvfrom\n";
-    constexpr char test_reply[] = "ACK from port"; // beginning of expected reply
+    constexpr char test_reply[] = "ACK from TCP port"; // beginning of expected reply
 
     for (auto const sock : sockets.sockets)
     {
@@ -141,7 +156,7 @@ TEST_CASE("Basic sendto()/recvfrom() read/write test")
         REQUIRE(sent == sizeof(test_msg) - 1);
     }
 
-    for (auto const sock : sockets.sockets)
+    for (auto const &sock : sockets.sockets)
     {
         char recv_buf[128];
         ssize_t const recvd = recvfrom(sock, recv_buf, sizeof(recv_buf) - 1, 0, nullptr, nullptr);
@@ -184,7 +199,7 @@ TEST_CASE("Basic sendto()/recvfrom() read/write test")
 
 TEST_CASE("Basic poll read/write test")
 {
-    Sockets sockets = setup_sockets();
+    Sockets sockets = setup_tcp_sockets();
 
     // Monitor all sockets for writability using poll()
     struct pollfd fds[NUM_PORTS];
@@ -245,3 +260,66 @@ TEST_CASE("Basic poll read/write test")
         REQUIRE(close(sock) >= 0);
     }
 }
+
+#if 0
+// TODO Test not working yet because of QEMU UDP problems
+TEST_CASE("Basic UDP sendto()/recvfrom() test")
+{
+    Sockets sockets = setup_udp_sockets();
+
+    // QEMU connects via guestfwd to a simulated server on IP address 10.0.2.2 port 5000
+    constexpr uint32_t simulated_server_ip = (10U << 24) | (0U << 16) | (2U << 8) | 2U;
+
+    constexpr char test_msg[] = "Test message via UDP sendto\n";
+    constexpr char test_reply[] = "ACK from UDP port"; // beginning of expected reply
+
+    for (auto const &sock : sockets.sockets)
+    {
+        struct sockaddr_in server_address;
+        server_address.sin_family = AF_INET;
+        server_address.sin_addr.s_addr = htonl(simulated_server_ip);
+        unsigned int const i = &sock - sockets.sockets.data();
+        server_address.sin_port = htons(START_PORT + i);
+
+        ssize_t const sent = sendto(sock, test_msg, sizeof(test_msg) - 1, 0, (struct sockaddr const *)&server_address, sizeof(server_address));
+        REQUIRE(sent == sizeof(test_msg) - 1);
+    }
+
+    // Wait for readability and read replies using select()
+    fd_set readfds;
+    FD_ZERO(&readfds);
+    for (auto const sock : sockets.sockets)
+    {
+        FD_SET(sock, &readfds);
+    }
+
+    struct timeval timeout = {5, 0}; // 5 second timeout
+    int ready = select(sockets.maxfd + 1, &readfds, NULL, NULL, &timeout);
+    REQUIRE(ready > 0);
+
+    for (auto const &sock : sockets.sockets)
+    {
+        if (FD_ISSET(sock, &readfds))
+        {
+            char recv_buf[128];
+            struct sockaddr_storage peer_addr;
+            socklen_t peer_addr_len = sizeof(peer_addr);
+            
+            ssize_t const recvd = recvfrom(sock, recv_buf, sizeof(recv_buf) - 1, 0, (struct sockaddr *)&peer_addr, &peer_addr_len);
+            REQUIRE(recvd > 0);
+            recv_buf[recvd] = '\0';
+
+            unsigned int const i = &sock - sockets.sockets.data();
+            printf("Reply from UDP port %d: %s", START_PORT + i, recv_buf);
+
+            // Verify that received message begins with expected reply.
+            REQUIRE(std::string(recv_buf).find(test_reply) == 0);
+        }
+    }
+
+    for (auto const sock : sockets.sockets)
+    {
+        REQUIRE(close(sock) >= 0);
+    }
+}
+#endif
