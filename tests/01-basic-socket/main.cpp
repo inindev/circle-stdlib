@@ -30,8 +30,8 @@ TEST_CASE("Basic socket creation tests")
 
     basic_socket_test const basic_socket_tests[] =
         {
-            {AF_INET, SOCK_DGRAM, IPPROTO_UDP, false},
-            {AF_INET, SOCK_DGRAM, 0, false},
+            {AF_INET, SOCK_DGRAM, IPPROTO_UDP, true},
+            {AF_INET, SOCK_DGRAM, 0, true},
             {AF_INET, SOCK_STREAM, IPPROTO_TCP, true},
             {AF_INET, SOCK_STREAM, 0, true},
             {AF_INET, SOCK_DGRAM, IPPROTO_IP, false},
