@@ -283,6 +283,9 @@ TEST_CASE("Basic UDP sendto()/recvfrom() test")
         REQUIRE(sent == sizeof(test_msg) - 1);
     }
 
+    // Wait a little bit so that the test server can send the replies.
+    CScheduler::Get ()->MsSleep (2000);
+
     // Wait for readability and read replies using select()
     fd_set readfds;
     FD_ZERO(&readfds);
@@ -295,6 +298,7 @@ TEST_CASE("Basic UDP sendto()/recvfrom() test")
     int ready = select(sockets.maxfd + 1, &readfds, NULL, NULL, &timeout);
     REQUIRE(ready > 0);
 
+    size_t received_count = 0;
     for (auto const &sock : sockets.sockets)
     {
         if (FD_ISSET(sock, &readfds))
@@ -312,8 +316,11 @@ TEST_CASE("Basic UDP sendto()/recvfrom() test")
 
             // Verify that received message begins with expected reply.
             REQUIRE(std::string(recv_buf).find(test_reply) == 0);
+
+            received_count += 1;
         }
     }
+    REQUIRE(received_count == NUM_PORTS);
 
     for (auto const sock : sockets.sockets)
     {
