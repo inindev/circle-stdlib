@@ -70,16 +70,33 @@ TEST_CASE("Basic socket lifecycle test")
 
     struct sockaddr_in server_address;
 
+    uint16_t const port = 5000;
+
     /* The sin_port and sin_addr members shall be in network byte order. */
     server_address.sin_family = AF_INET;
     server_address.sin_addr.s_addr = htonl(INADDR_ANY);
-    server_address.sin_port = htons(5000);
+    server_address.sin_port = htons(port);
 
     int const bind_result = bind(fd, reinterpret_cast<struct sockaddr *>(&server_address), sizeof(server_address));
 
     REQUIRE(bind_result != -1);
 
     MESSAGE("bind() on file descriptor ", std::to_string(fd), " succeeded");
+
+    socklen_t server_address_len = sizeof(server_address);
+    int const getsockname_result = getsockname(fd, reinterpret_cast<struct sockaddr *>(&server_address), &server_address_len);
+    REQUIRE(getsockname_result == 0);
+    REQUIRE(server_address_len == sizeof(server_address));
+    REQUIRE(ntohs(server_address.sin_port) == port);
+    
+    // Log the local IP address for information
+    uint32_t const addr = ntohl(server_address.sin_addr.s_addr);
+    std::string const ip_str = std::to_string((addr >> 24) & 0xFF) + "." +
+                               std::to_string((addr >> 16) & 0xFF) + "." +
+                               std::to_string((addr >> 8) & 0xFF) + "." +
+                               std::to_string(addr & 0xFF);
+    MESSAGE("Local IP address: " << ip_str);
+    MESSAGE("Local port: " << ntohs(server_address.sin_port));
 
     int const listen_result = listen(fd, 3);
 
