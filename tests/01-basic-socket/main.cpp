@@ -34,17 +34,17 @@ TEST_CASE("Basic socket creation tests")
             {AF_INET, SOCK_DGRAM, 0, true},
             {AF_INET, SOCK_STREAM, IPPROTO_TCP, true},
             {AF_INET, SOCK_STREAM, 0, true},
-            {AF_INET, SOCK_DGRAM, IPPROTO_IP, false},
+            {AF_INET, SOCK_DGRAM, IPPROTO_IP, true}, // the same as protocol 0 for SOCK_DGRAM
             {AF_INET, SOCK_STREAM, IPPROTO_UDP, false},
             {AF_UNIX, SOCK_STREAM, IPPROTO_TCP, false}};
 
     auto const socket_creation_test = [&](basic_socket_test const &t)
     {
-        int const fd = socket(t.domain, t.type, t.protocol);
         unsigned int const testnum = &t - basic_socket_tests;
 
         MESSAGE("Basic socket test #", std::to_string(testnum));
 
+        int const fd = socket(t.domain, t.type, t.protocol);
         if (t.expect_success)
         {
             REQUIRE(fd != -1);
