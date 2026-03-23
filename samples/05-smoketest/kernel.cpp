@@ -85,6 +85,19 @@ CKernel::Run(void)
         mLogger.Write(GetKernelName(), LogNotice, "Time is %u", nTime);
     }
 
+    // Availability of strduo()
+    char *s = strdup("Hello");
+    if (s == nullptr)
+    {
+        PErrorExit("strdup () failed");
+    }
+    if (strcmp(s, "Hello") != 0)
+    {
+        PErrorExit("strdup () test failed");
+    }
+    Report("strdup () test succeeded");
+    
+
     IoTest();
     CxxTest();
 

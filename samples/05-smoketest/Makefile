@@ -11,7 +11,8 @@ OBJS	= main.o kernel.o
 
 include $(CIRCLEHOME)/Rules.mk
 
-CFLAGS += -I "$(NEWLIBDIR)/include" -I $(STDDEF_INCPATH) -I ../../include -D_POSIX_C_SOURCE=200112L
+INCLUDE += -I "$(NEWLIBDIR)/include" -I $(STDDEF_INCPATH) -I ../../include
+DEFINE	+= -D_POSIX_C_SOURCE=200809L
 LIBS := "$(NEWLIBDIR)/lib/libm.a" "$(NEWLIBDIR)/lib/libc.a" "$(NEWLIBDIR)/lib/libcirclenewlib.a" \
  	$(CIRCLEHOME)/addon/SDCard/libsdcard.a \
   	$(CIRCLEHOME)/lib/usb/libusb.a \
