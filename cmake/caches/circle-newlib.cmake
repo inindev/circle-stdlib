@@ -41,6 +41,8 @@ set(LIBUNWIND_REMEMBER_HEAP_ALLOC ON CACHE BOOL "")
 set(LIBUNWIND_USE_COMPILER_RT ON CACHE BOOL "")
 # find_program(QEMU_SYSTEM_ARM qemu-system-arm REQUIRED)
 
+set(LIBCXX_INCLUDE_TESTS OFF CACHE BOOL "")
+
 # On embedded platforms that don't support shared library targets, CMake implicitly changes shared
 # library targets to be static library targets. This results in duplicate definitions of the static
 # library targets even though we might not ever build the shared library target, which breaks the
