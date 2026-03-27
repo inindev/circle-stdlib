@@ -45,6 +45,7 @@ CIRCLE_DEFINES=""
 KASAN_ENABLED=0
 TOOLPREFIX=arm-none-eabi-
 STDDEF_INCPATH=""
+CXX_INCPATHS=()
 STDLIB_SUPPORT=3
 FLOAT_ABI=hard
 OPTTLS=0
@@ -90,6 +91,7 @@ echo "Remaining arguments:"
 for arg do echo '--> '"\`$arg'" ; done
 
 : ${CC:="$TOOLPREFIX"gcc}
+: ${CXX:="$TOOLPREFIX"g++}
 
 if [ ! -x "`which $CC 2> /dev/null`" ]
 then
@@ -120,6 +122,19 @@ then
 fi
 
 echo "STDDEF_INCPATH=$STDDEF_INCPATH"
+
+if [ ${#CXX_INCPATHS[@]} -eq 0 ]
+then
+    mapfile -t CXX_INCPATHS < <(echo | "$CXX" -v -E -x c++ - 2>&1 | grep "^ /.*include/c++" | sed -e "s/^ //")
+fi
+
+if [ ${#CXX_INCPATHS[@]} -eq 0 ]
+then
+    echo "Error: Unable to determine include paths for C++, exiting" >&2
+    exit 1
+fi
+
+echo "CFLAGS_ISYSTEM='$CFLAGS_ISYSTEM'"
 
 case "$RASPBERRYPI" in
     1|2|3|4|5) ;;
@@ -175,8 +190,6 @@ fi
     echo "FLOAT_ABI = $FLOAT_ABI"
     echo "KASAN_ENABLED = $KASAN_ENABLED"
     echo "STDLIB_SUPPORT = $STDLIB_SUPPORT"
-    echo "STDDEF_INCPATH = \"$STDDEF_INCPATH\""
-    echo "CFLAGS = -Wno-parentheses $CIRCLE_CFLAGS"
     if [ "$CIRCLE_DEFINES" != "" ]
     then
         echo "DEFINE += $CIRCLE_DEFINES"
@@ -231,6 +244,7 @@ then
         -DPREFER_SIZE_OVER_SPEED"
 fi
 
+
 export \
     CPPFLAGS_FOR_TARGET="-isystem \"$CIRCLEHOME/include\" -isystem \"$CIRCLEHOME/addon\" -isystem \"$TOPDIR/include\"" \
     CC_FOR_TARGET=${TOOLPREFIX}gcc \
@@ -257,6 +271,16 @@ export CFLAGS_FOR_TARGET CXXFLAGS_FOR_TARGET="$CFLAGS_FOR_TARGET"
         --prefix "$NEWLIB_INSTALL_DIR" --enable-newlib-long-time_t
 )
 
+# Rebuild the original order of include paths. This is important
+# because otherwise #include_next in the C++ standard library headers
+# will not find the correct headers.
+SYSTEM_INCPATHS=("${CXX_INCPATHS[@]}" "$STDDEF_INCPATH" '$(CIRCLE_STDLIB_INSTALL_DIR)/include')
+
+CFLAGS_ISYSTEM=""
+for INCPATH in "${SYSTEM_INCPATHS[@]}"; do
+    CFLAGS_ISYSTEM="$CFLAGS_ISYSTEM -isystem \"$INCPATH\""
+done
+
 # create circle-stdlib's configuration file
 (
     echo "CC = ${CC}"
@@ -277,6 +301,23 @@ export CFLAGS_FOR_TARGET CXXFLAGS_FOR_TARGET="$CFLAGS_FOR_TARGET"
     echo "OBJCOPY_FOR_TARGET = ${OBJCOPY_FOR_TARGET}"
     echo "OBJDUMP_FOR_TARGET = ${OBJDUMP_FOR_TARGET}"
     echo "NEWLIB_ARCH = ${NEWLIB_ARCH}"
+    echo "CFLAGS += -nostdinc ${CFLAGS_ISYSTEM}"
+    echo "STDDEF_INCPATH = \"$STDDEF_INCPATH\""
+    echo "CIRCLEHOME = ${CIRCLEHOME}"
+    echo 'CIRCLE_STDLIB_INSTALL_DIR = $(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH)'
+    echo "CIRCLE_STDLIB_INCLUDES = -I${TOPDIR}/include"
+    echo 'CIRCLE_STDLIB_LIBS = \'
+    echo '    $(CIRCLE_STDLIB_INSTALL_DIR)/lib/libm.a \'
+    echo '    $(CIRCLE_STDLIB_INSTALL_DIR)/lib/libc.a \'
+    echo '    $(CIRCLE_STDLIB_INSTALL_DIR)/lib/libcirclenewlib.a \'
+    echo '    $(CIRCLEHOME)/addon/SDCard/libsdcard.a \'
+    echo '    $(CIRCLEHOME)/lib/usb/libusb.a \'
+    echo '    $(CIRCLEHOME)/lib/input/libinput.a \'
+    echo '    $(CIRCLEHOME)/addon/fatfs/libfatfs.a \'
+    echo '    $(CIRCLEHOME)/lib/fs/libfs.a \'
+    echo '    $(CIRCLEHOME)/lib/net/libnet.a \'
+    echo '    $(CIRCLEHOME)/lib/sched/libsched.a \'
+    echo '    $(CIRCLEHOME)/lib/libcircle.a'
 
     if [ $OPTTLS -eq 1 ]
     then
