@@ -22,13 +22,14 @@ function usage() {
     echo "  -s <path>, --stddefpath <path>"
     echo "                                 path where stddef.h header is located (only necessary"
     echo "                                 if script cannot determine it automatically)"
+    echo "  --libcxx                       build with LLVM libc++"
 }
 
 # From the bash FAQ: How to use pathnames relative to the script
 cd "${BASH_SOURCE%/*}" || exit 1
 TOPDIR="$PWD"
 
-TEMP=$(getopt -o dhkno:p:r:s: --long debug,help,kasan,no-circle-build,no-cpp,option:,opt-tls,qemu,prefix:,raspberrypi:,script-debug,softfp,stddefpath: \
+TEMP=$(getopt -o dhkno:p:r:s: --long debug,help,kasan,no-circle-build,no-cpp,option:,opt-tls,qemu,prefix:,raspberrypi:,script-debug,softfp,stddefpath:,libcxx \
      -n 'configure' -- "$@")
 
 if [ $? != 0 ] ; then echo usage; exit 1 ; fi
@@ -54,6 +55,7 @@ NEWLIB_ARCH="arm-none-circle"
 NEWLIB_INSTALL_DIR="$TOPDIR/install"
 NEWLIB_BUILD_DIR="$TOPDIR/build/circle-newlib"
 CIRCLEHOME="$TOPDIR/libs/circle"
+LIBCXX_ENABLED=0
 
 while true ; do
     case "$1" in
@@ -69,6 +71,7 @@ while true ; do
 	--script-debug) set -x ; shift;;
 	--softfp) FLOAT_ABI=softfp ; shift;;
 	-s|--stddefpath) STDDEF_INCPATH="$2" ; shift 2;;
+	--libcxx) LIBCXX_ENABLED=1 ; shift;;
 	--) shift ; break ;;
 	*) echo "Internal error!" ; exit 1;;
     esac
@@ -86,6 +89,7 @@ echo "NEWLIB_INSTALL_DIR=$NEWLIB_INSTALL_DIR"
 echo "NEWLIB_BUILD_DIR=$NEWLIB_BUILD_DIR"
 echo "DEBUG=$DEBUG"
 echo "KASAN_ENABLED=$KASAN_ENABLED"
+echo "LIBCXX_ENABLED=$LIBCXX_ENABLED"
 
 echo "Remaining arguments:"
 for arg do echo '--> '"\`$arg'" ; done
@@ -272,7 +276,14 @@ export CFLAGS_FOR_TARGET CXXFLAGS_FOR_TARGET="$CFLAGS_FOR_TARGET"
 # Rebuild the original order of include paths. This is important
 # because otherwise #include_next in the C++ standard library headers
 # will not find the correct headers.
-SYSTEM_INCPATHS=("${CXX_INCPATHS[@]}" "$STDDEF_INCPATH" '$(CIRCLE_STDLIB_INSTALL_DIR)/include')
+if [ ${LIBCXX_ENABLED} -eq 1 ]
+then
+    SYSTEM_INCPATHS=('$(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH)-libc++/include'
+        '$(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH)-libc++/include/c++/v1'
+        "${STDDEF_INCPATH}" '$(CIRCLE_STDLIB_INSTALL_DIR)/include')
+else
+    SYSTEM_INCPATHS=("${CXX_INCPATHS[@]}" "${STDDEF_INCPATH}" '$(CIRCLE_STDLIB_INSTALL_DIR)/include')
+fi
 
 CFLAGS_ISYSTEM=""
 for INCPATH in "${SYSTEM_INCPATHS[@]}"; do
@@ -302,6 +313,10 @@ echo "CFLAGS_ISYSTEM='$CFLAGS_ISYSTEM'"
     echo "OBJDUMP_FOR_TARGET = ${OBJDUMP_FOR_TARGET}"
     echo "NEWLIB_ARCH = ${NEWLIB_ARCH}"
     echo "CFLAGS += -nostdinc ${CFLAGS_ISYSTEM}"
+    if [ ${LIBCXX_ENABLED} -eq 1 ]
+    then
+        echo "DEFINE += -D_GNU_SOURCE -D_POSIX_C_SOURCE=200809L -D_LIBCPP_HAS_NO_TIMESPEC_GET"
+    fi
     echo "STDDEF_INCPATH = \"$STDDEF_INCPATH\""
     echo "CIRCLEHOME = ${CIRCLEHOME}"
     echo 'CIRCLE_STDLIB_INSTALL_DIR = $(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH)'
