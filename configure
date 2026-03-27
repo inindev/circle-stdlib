@@ -134,8 +134,6 @@ then
     exit 1
 fi
 
-echo "CFLAGS_ISYSTEM='$CFLAGS_ISYSTEM'"
-
 case "$RASPBERRYPI" in
     1|2|3|4|5) ;;
     *) echo "Unknown Raspberry Pi target" >&2; exit 1;;
@@ -280,6 +278,8 @@ CFLAGS_ISYSTEM=""
 for INCPATH in "${SYSTEM_INCPATHS[@]}"; do
     CFLAGS_ISYSTEM="$CFLAGS_ISYSTEM -isystem \"$INCPATH\""
 done
+
+echo "CFLAGS_ISYSTEM='$CFLAGS_ISYSTEM'"
 
 # create circle-stdlib's configuration file
 (
