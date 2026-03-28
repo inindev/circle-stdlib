@@ -278,8 +278,8 @@ export CFLAGS_FOR_TARGET CXXFLAGS_FOR_TARGET="$CFLAGS_FOR_TARGET"
 # will not find the correct headers.
 if [ ${LIBCXX_ENABLED} -eq 1 ]
 then
-    SYSTEM_INCPATHS=('$(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH)-libc++/include'
-        '$(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH)-libc++/include/c++/v1'
+    SYSTEM_INCPATHS=('$(LIBCXX_INSTALL_DIR)/include'
+        '$(LIBCXX_INSTALL_DIR)/include/c++/v1'
         "${STDDEF_INCPATH}" '$(CIRCLE_STDLIB_INSTALL_DIR)/include')
 else
     SYSTEM_INCPATHS=("${CXX_INCPATHS[@]}" "${STDDEF_INCPATH}" '$(CIRCLE_STDLIB_INSTALL_DIR)/include')
@@ -313,18 +313,7 @@ echo "CFLAGS_ISYSTEM='$CFLAGS_ISYSTEM'"
     echo "OBJDUMP_FOR_TARGET = ${OBJDUMP_FOR_TARGET}"
     echo "NEWLIB_ARCH = ${NEWLIB_ARCH}"
     echo "CFLAGS += -nostdinc ${CFLAGS_ISYSTEM}"
-    if [ ${LIBCXX_ENABLED} -eq 1 ]
-    then
-        echo "DEFINE += -D_GNU_SOURCE -D_POSIX_C_SOURCE=200809L -D_LIBCPP_HAS_NO_TIMESPEC_GET"
-    fi
-    echo "STDDEF_INCPATH = \"$STDDEF_INCPATH\""
-    echo "CIRCLEHOME = ${CIRCLEHOME}"
-    echo 'CIRCLE_STDLIB_INSTALL_DIR = $(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH)'
-    echo "CIRCLE_STDLIB_INCLUDES = -I${TOPDIR}/include"
-    echo 'CIRCLE_STDLIB_LIBS = \'
-    echo '    $(CIRCLE_STDLIB_INSTALL_DIR)/lib/libm.a \'
-    echo '    $(CIRCLE_STDLIB_INSTALL_DIR)/lib/libc.a \'
-    echo '    $(CIRCLE_STDLIB_INSTALL_DIR)/lib/libcirclenewlib.a \'
+    echo 'CIRCLE_STDLIB_CIRCLE_LIBS = \'
     echo '    $(CIRCLEHOME)/addon/SDCard/libsdcard.a \'
     echo '    $(CIRCLEHOME)/lib/usb/libusb.a \'
     echo '    $(CIRCLEHOME)/lib/input/libinput.a \'
@@ -333,6 +322,31 @@ echo "CFLAGS_ISYSTEM='$CFLAGS_ISYSTEM'"
     echo '    $(CIRCLEHOME)/lib/net/libnet.a \'
     echo '    $(CIRCLEHOME)/lib/sched/libsched.a \'
     echo '    $(CIRCLEHOME)/lib/libcircle.a'
+    echo 'CIRCLE_STDLIB_INSTALL_DIR = $(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH)'
+    if [ ${LIBCXX_ENABLED} -eq 1 ]
+    then
+        echo 'LIBCXX_INSTALL_DIR = $(CIRCLE_STDLIB_INSTALL_DIR)-libc++'
+        # echo "LDFLAGS += --nodefaultlib"
+        echo "DEFINE += -D_GNU_SOURCE -D_POSIX_C_SOURCE=200809L -D_LIBCPP_HAS_NO_TIMESPEC_GET"
+        echo 'CIRCLE_STDLIB_LIBS = \'
+        echo '    $(LIBCXX_INSTALL_DIR)/lib/libc++.a \'
+        echo '    $(LIBCXX_INSTALL_DIR)/lib/libc++abi.a \'
+        echo '    $(LIBCXX_INSTALL_DIR)/lib/libunwind.a \'
+        echo '    $(CIRCLE_STDLIB_INSTALL_DIR)/lib/libm.a \'
+        echo '    $(CIRCLE_STDLIB_INSTALL_DIR)/lib/libc.a \'
+        echo '    $(CIRCLE_STDLIB_INSTALL_DIR)/lib/libcirclenewlib.a \'
+        echo '    $(CIRCLE_STDLIB_CIRCLE_LIBS)'
+    else
+        echo 'CIRCLE_STDLIB_LIBS = \'
+        echo '    $(CIRCLE_STDLIB_INSTALL_DIR)/lib/libm.a \'
+        echo '    $(CIRCLE_STDLIB_INSTALL_DIR)/lib/libc.a \'
+        echo '    $(CIRCLE_STDLIB_INSTALL_DIR)/lib/libcirclenewlib.a \'
+        echo '    $(CIRCLE_STDLIB_CIRCLE_LIBS)'
+    fi
+    echo "STDDEF_INCPATH = \"$STDDEF_INCPATH\""
+    echo "CIRCLEHOME = ${CIRCLEHOME}"
+    echo "CIRCLE_STDLIB_INCLUDES = -I${TOPDIR}/include"
+
 
     if [ $OPTTLS -eq 1 ]
     then
