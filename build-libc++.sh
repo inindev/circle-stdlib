@@ -16,7 +16,7 @@ cmake \
     -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
     -DCMAKE_TOOLCHAIN_FILE="${CIRCLE_HOME}/cmake/toolchains/toolchain.cmake" \
     -DRUNTIMES_USE_LIBC=newlib \
-    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_BUILD_TYPE=Debug \
     -DCMAKE_C_FLAGS="${flags}" \
     -DCMAKE_CXX_FLAGS="${flags}" \
     -DLIBCXX_CXX_ABI=libcxxabi \
