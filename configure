@@ -177,11 +177,11 @@ then
 fi
 
 KERNEL_MAX_SIZE="unused"
-if [ $KASAN_ENABLED -eq 1 ]
+if [ $KASAN_ENABLED -eq 1 -o $LIBCXX_ENABLED -eq 1 ]
 then
     # Keep in sync with KASAN_SHADOW_MAPPING_OFFSET below!
     # See Circle's doc/kasan.txt for details.
-    KERNEL_MAX_SIZE="0x300000"
+    KERNEL_MAX_SIZE="0x400000"
     CIRCLE_DEFINES="$CIRCLE_DEFINES -DKERNEL_MAX_SIZE=${KERNEL_MAX_SIZE}"
 fi
 
@@ -329,13 +329,13 @@ echo "CFLAGS_ISYSTEM='$CFLAGS_ISYSTEM'"
         # echo "LDFLAGS += --nodefaultlib"
         echo "DEFINE += -D_GNU_SOURCE -D_POSIX_C_SOURCE=200809L -D_LIBCPP_HAS_NO_TIMESPEC_GET"
         echo 'CIRCLE_STDLIB_LIBS = \'
+        echo '    $(CIRCLE_STDLIB_CIRCLE_LIBS) \'
         echo '    $(LIBCXX_INSTALL_DIR)/lib/libc++.a \'
         echo '    $(LIBCXX_INSTALL_DIR)/lib/libc++abi.a \'
         echo '    $(LIBCXX_INSTALL_DIR)/lib/libunwind.a \'
         echo '    $(CIRCLE_STDLIB_INSTALL_DIR)/lib/libm.a \'
         echo '    $(CIRCLE_STDLIB_INSTALL_DIR)/lib/libc.a \'
-        echo '    $(CIRCLE_STDLIB_INSTALL_DIR)/lib/libcirclenewlib.a \'
-        echo '    $(CIRCLE_STDLIB_CIRCLE_LIBS)'
+        echo '    $(CIRCLE_STDLIB_INSTALL_DIR)/lib/libcirclenewlib.a'
     else
         echo 'CIRCLE_STDLIB_LIBS = \'
         echo '    $(CIRCLE_STDLIB_INSTALL_DIR)/lib/libm.a \'
