@@ -4,7 +4,7 @@ set -e
 
 # determine current path
 CIRCLE_HOME="$(dirname "$(realpath "$0")")"
-LLVM_PROJECT_HOME="${CIRCLE_HOME}/../llvm-project"
+LLVM_PROJECT_HOME="${CIRCLE_HOME}/libs/llvm-project"
 
 flags="--sysroot=${CIRCLE_HOME}/install/aarch64-none-circle -isystem ${CIRCLE_HOME}/install/aarch64-none-circle/include -isystem ${CIRCLE_HOME}/libs/circle/addon -isystem ${CIRCLE_HOME}/include -D_GNU_SOURCE -D__circle__ -D_POSIX_C_SOURCE=200809L -D_LIBCPP_HAS_NO_TIMESPEC_GET"
 
