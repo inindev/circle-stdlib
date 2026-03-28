@@ -112,10 +112,12 @@ namespace
 				 [&](std::string const &s)
 				 { ofs << s.c_str() << std::endl; });
 
+#if 0
 		std::cout << "Type some characters and hit <RETURN>" << std::endl;
 		std::string line;
 		std::getline(std::cin, line);
 		std::cout << "Read '" << line << "' from std::cin..." << std::endl;
+#endif
 
 		// Test out-of-memory condition
 		try
