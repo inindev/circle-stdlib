@@ -328,7 +328,7 @@ echo "CFLAGS_ISYSTEM='$CFLAGS_ISYSTEM'"
     then
         echo 'LIBCXX_INSTALL_DIR = $(CIRCLE_STDLIB_INSTALL_DIR)-libc++'
         echo "LDFLAGS += --eh-frame-hdr"
-        echo "DEFINE += -D_GNU_SOURCE -D_POSIX_C_SOURCE=200809L -D_LIBCPP_HAS_NO_TIMESPEC_GET"
+        echo "DEFINE += -D_GNU_SOURCE -D_POSIX_C_SOURCE=200809L"
         echo 'CIRCLE_STDLIB_LIBS = \'
         echo '    $(LIBCXX_INSTALL_DIR)/lib/libc++.a \'
         echo '    $(LIBCXX_INSTALL_DIR)/lib/libc++abi.a \'

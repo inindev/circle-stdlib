@@ -2,7 +2,11 @@
 
 include Config.mk
 
+ifdef LIBCXX_INSTALL_DIR
+all: circle newlib $(MBEDTLS) libcxx
+else
 all: circle newlib $(MBEDTLS)
+endif
 
 build-samples: build-stdlib-samples $(MBEDTLS_SAMPLES)
 
@@ -26,6 +30,37 @@ newlib:
 	OBJDUMP_FOR_TARGET='$(OBJDUMP_FOR_TARGET)' \
 	$(MAKE) -C $(NEWLIB_BUILD_DIR) && \
 	$(MAKE) -C $(NEWLIB_BUILD_DIR) install
+
+libcxx_flags = --sysroot=$(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH) -isystem $(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH)/include -isystem $(CIRCLEHOME)/addon -isystem $(PWD)/include -D_GNU_SOURCE -D__circle__ -D_POSIX_C_SOURCE=200809L
+
+libcxx: $(LIBCXX_INSTALL_DIR)/lib/libc++.a
+
+$(LIBCXX_INSTALL_DIR)/lib/libc++.a:
+	@echo "Fetching llvm-project via FetchContent..."
+	cmake -S cmake/libcxx-fetch -B build/libcxx-fetch
+	@echo "Configuring libc++..."
+	cmake \
+		-S libs/llvm-project/runtimes \
+		-B build/libc++ \
+		-C cmake/caches/circle-newlib.cmake \
+		-G Ninja \
+		-DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
+		-DCMAKE_TOOLCHAIN_FILE="$(PWD)/cmake/toolchains/toolchain.cmake" \
+		-DRUNTIMES_USE_LIBC=newlib \
+		-DCMAKE_BUILD_TYPE=Debug \
+		-DCMAKE_C_FLAGS="$(libcxx_flags)" \
+		-DCMAKE_CXX_FLAGS="$(libcxx_flags)" \
+		-DLIBCXX_CXX_ABI=libcxxabi \
+		-DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+		-DLIBCXX_ENABLE_WERROR=NO \
+		-DLIBCXXABI_ENABLE_WERROR=NO \
+		-DLIBUNWIND_ENABLE_WERROR=NO \
+		-DCMAKE_INSTALL_MESSAGE=NEVER \
+		-DCMAKE_INSTALL_PREFIX="$(LIBCXX_INSTALL_DIR)"
+	@echo "Building libc++..."
+	cmake --build build/libc++ --verbose --target cxx --target cxxabi --target unwind
+	@echo "Installing libc++..."
+	cmake --build build/libc++ --target install
 
 build-stdlib-samples:
 	$(MAKE) -C samples/01-nosys
@@ -87,3 +122,4 @@ clean: clean-stdlib-samples clean-mbedtls-samples clean-tests
 mrproper: clean
 	-rm -f Config.mk
 	-rm -rf build/circle-newlib/*
+	-rm -rf build/libcxx build/libcxx-fetch
