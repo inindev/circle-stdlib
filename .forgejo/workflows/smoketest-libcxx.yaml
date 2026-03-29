@@ -13,7 +13,7 @@ jobs:
     runs-on: docker
 
     container:
-      image: codeberg.org/larchcone/ci/node-circle-stdlib:gcc15-v2
+      image: codeberg.org/larchcone/ci/node-circle-stdlib:gcc15-v3
 
     steps:
       - name: checkout code
