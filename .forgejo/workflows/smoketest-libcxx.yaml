@@ -1,0 +1,42 @@
+name: Smoke Tests (libc++)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+      - develop
+      - 'libc\+\+-build'
+
+jobs:
+  test-libcxx:
+    name: host-x64-target-aarch64 - With libc++
+
+    runs-on: docker
+
+    container:
+      # TODO: replace with the actual gcc15 + libc++ container image tag once published
+      image: codeberg.org/larchcone/ci/node-circle-stdlib:20-gcc15-v1
+
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Configure circle-stdlib with QEMU support and libc++
+        run: |
+          ./configure -p aarch64-none-elf- -r 3 --qemu --libcxx
+
+      - name: Build libraries
+        run: make -j$(nproc)
+
+      - name: Build samples
+        run: make build-samples
+
+      - name: Run smoke test with QEMU
+        run: |
+          cd samples/05-smoketest
+          ../../testdata/setup-sd.sh
+          ulimit -t 300
+          qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -nographic -semihosting -sd sdcard.img
