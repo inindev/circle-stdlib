@@ -317,6 +317,7 @@ echo "CFLAGS_ISYSTEM='$CFLAGS_ISYSTEM'"
     echo "OBJDUMP_FOR_TARGET = ${OBJDUMP_FOR_TARGET}"
     echo "NEWLIB_ARCH = ${NEWLIB_ARCH}"
     echo "CFLAGS += -nostdinc ${CFLAGS_ISYSTEM}"
+    echo "DEFINE += -D_GNU_SOURCE -D__circle__ -D_POSIX_C_SOURCE=200809L"
     echo 'CIRCLE_STDLIB_CIRCLE_LIBS = \'
     echo '    $(CIRCLEHOME)/addon/SDCard/libsdcard.a \'
     echo '    $(CIRCLEHOME)/lib/usb/libusb.a \'
