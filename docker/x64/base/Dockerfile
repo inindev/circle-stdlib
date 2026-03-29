@@ -4,7 +4,7 @@ RUN apt-get update && \
     apt-get install -y \
         build-essential wget ninja-build libglib2.0-dev libslirp-dev \
         python3 python3-pip python3-venv git texinfo netcat-traditional \
-        cmake ninja-build && \
+        ninja-build && \
     apt-get clean && \
     pip3 install tomli
 
@@ -23,3 +23,9 @@ RUN git clone -b circle-hcd-dwc2-9.1.1 https://codeberg.org/larchcone/qemu.git &
 ENV PATH="$QEMU_BASEDIR/qemu-9.1.1/bin:$PATH"
 
 WORKDIR /opt
+
+RUN wget https://github.com/Kitware/CMake/releases/download/v3.31.11/cmake-3.31.11-linux-x86_64.tar.gz && \
+    tar xf cmake-3.31.11-linux-x86_64.tar.gz && \
+    rm cmake-3.31.11-linux-x86_64.tar.gz
+
+ENV PATH="/opt/cmake-3.31.11-linux-x86_64/bin:$PATH"
