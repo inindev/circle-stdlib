@@ -321,6 +321,7 @@ echo "CFLAGS_ISYSTEM='$CFLAGS_ISYSTEM'"
     echo '    $(CIRCLEHOME)/lib/fs/libfs.a \'
     echo '    $(CIRCLEHOME)/lib/net/libnet.a \'
     echo '    $(CIRCLEHOME)/lib/sched/libsched.a \'
+    echo '    $(CIRCLEHOME)/addon/qemu/libqemusupport.a \'
     echo '    $(CIRCLEHOME)/lib/libcircle.a'
     echo 'CIRCLE_STDLIB_INSTALL_DIR = $(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH)'
     if [ ${LIBCXX_ENABLED} -eq 1 ]
