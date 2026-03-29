@@ -4,7 +4,8 @@ project(FetchLLVM NONE)
 include(FetchContent)
 FetchContent_Declare(
     llvm_project
-    GGIT_TAG       llvmorg-22.1.2
+    GIT_REPOSITORY https://github.com/llvm/llvm-project.git
+    GIT_TAG        llvmorg-22.1.2
     GIT_SHALLOW    TRUE
     SOURCE_DIR     "${CMAKE_CURRENT_SOURCE_DIR}/../../libs/llvm-project"
 )

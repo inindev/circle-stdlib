@@ -31,7 +31,7 @@ newlib:
 	$(MAKE) -C $(NEWLIB_BUILD_DIR) && \
 	$(MAKE) -C $(NEWLIB_BUILD_DIR) install
 
-libcxx_flags = $(ARCHCPU) --sysroot=$(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH) -isystem $(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH)/include -isystem $(CIRCLEHOME)/addon -isystem $(PWD)/include -D_GNU_SOURCE -D__circle__ -D_POSIX_C_SOURCE=200809L
+libcxx_flags = $(ARCHCPU) --sysroot=$(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH) -isystem $(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH)/include -isystem $(CIRCLEHOME)/addon -isystem $(PWD)/include -D_GNU_SOURCE -D__circle__ -D_POSIX_C_SOURCE=200809L -U__FRACT_FBIT__
 
 libcxx: $(LIBCXX_INSTALL_DIR)/lib/libc++.a
 
