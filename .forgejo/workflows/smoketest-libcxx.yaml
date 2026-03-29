@@ -13,8 +13,7 @@ jobs:
     runs-on: docker
 
     container:
-      # TODO: replace with the actual gcc15 + libc++ container image tag once published
-      image: codeberg.org/larchcone/ci/node-circle-stdlib:20-gcc15-v1
+      image: codeberg.org/larchcone/ci/node-circle-stdlib:gcc15-v1
 
     steps:
       - name: checkout code

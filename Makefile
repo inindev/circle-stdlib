@@ -31,7 +31,7 @@ newlib:
 	$(MAKE) -C $(NEWLIB_BUILD_DIR) && \
 	$(MAKE) -C $(NEWLIB_BUILD_DIR) install
 
-libcxx_flags = --sysroot=$(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH) -isystem $(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH)/include -isystem $(CIRCLEHOME)/addon -isystem $(PWD)/include -D_GNU_SOURCE -D__circle__ -D_POSIX_C_SOURCE=200809L
+libcxx_flags = $(ARCHCPU) --sysroot=$(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH) -isystem $(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH)/include -isystem $(CIRCLEHOME)/addon -isystem $(PWD)/include -D_GNU_SOURCE -D__circle__ -D_POSIX_C_SOURCE=200809L
 
 libcxx: $(LIBCXX_INSTALL_DIR)/lib/libc++.a
 
@@ -42,10 +42,10 @@ $(LIBCXX_INSTALL_DIR)/lib/libc++.a:
 	cmake \
 		-S libs/llvm-project/runtimes \
 		-B build/libc++ \
-		-C cmake/caches/circle-newlib.cmake \
+		-C cmake/caches/circle-newlib-$(NEWLIB_ARCH).cmake \
 		-G Ninja \
 		-DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
-		-DCMAKE_TOOLCHAIN_FILE="$(PWD)/cmake/toolchains/toolchain.cmake" \
+		-DCMAKE_TOOLCHAIN_FILE="$(PWD)/cmake/toolchains/toolchain-$(NEWLIB_ARCH).cmake" \
 		-DRUNTIMES_USE_LIBC=newlib \
 		-DCMAKE_BUILD_TYPE=Debug \
 		-DCMAKE_C_FLAGS="$(libcxx_flags)" \
