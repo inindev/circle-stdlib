@@ -329,13 +329,13 @@ echo "CFLAGS_ISYSTEM='$CFLAGS_ISYSTEM'"
         echo "LDFLAGS += --eh-frame-hdr"
         echo "DEFINE += -D_GNU_SOURCE -D_POSIX_C_SOURCE=200809L -D_LIBCPP_HAS_NO_TIMESPEC_GET"
         echo 'CIRCLE_STDLIB_LIBS = \'
-        echo '    $(CIRCLE_STDLIB_CIRCLE_LIBS) \'
         echo '    $(LIBCXX_INSTALL_DIR)/lib/libc++.a \'
         echo '    $(LIBCXX_INSTALL_DIR)/lib/libc++abi.a \'
         echo '    $(LIBCXX_INSTALL_DIR)/lib/libunwind.a \'
         echo '    $(CIRCLE_STDLIB_INSTALL_DIR)/lib/libm.a \'
         echo '    $(CIRCLE_STDLIB_INSTALL_DIR)/lib/libc.a \'
-        echo '    $(CIRCLE_STDLIB_INSTALL_DIR)/lib/libcirclenewlib.a'
+        echo '    $(CIRCLE_STDLIB_INSTALL_DIR)/lib/libcirclenewlib.a \'
+        echo '    $(CIRCLE_STDLIB_CIRCLE_LIBS)'
     else
         echo 'CIRCLE_STDLIB_LIBS = \'
         echo '    $(CIRCLE_STDLIB_INSTALL_DIR)/lib/libm.a \'
