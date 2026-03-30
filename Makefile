@@ -37,7 +37,7 @@ newlib:
 # The current solution is to use the newest commit of llvm-project, which is
 # newer than the latest release, and does not cause build errors.
 # TODO Switch to an official release once the build errors are fixed in the release version.
-libcxx_flags = $(ARCHCPU) --sysroot=$(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH) -isystem $(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH)/include -isystem $(CIRCLEHOME)/addon -isystem $(PWD)/include -D_GNU_SOURCE -D__circle__ -D_POSIX_C_SOURCE=200809L
+libcxx_flags = $(ARCHCPU) --sysroot=$(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH) -isystem $(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH)/include -isystem $(CIRCLEHOME)/addon -isystem $(PWD)/include -D_GNU_SOURCE -D__circle__ -D_POSIX_C_SOURCE=200809L -U__FRACT_FBIT__
 
 libcxx: $(LIBCXX_INSTALL_DIR)/lib/libc++.a
 
@@ -124,8 +124,9 @@ clean: clean-stdlib-samples clean-mbedtls-samples clean-tests
 	-test -n "$(NEWLIB_INSTALL_DIR)" && rm -rf "$(NEWLIB_INSTALL_DIR)"/*
 	-$(MAKE) -C libs/mbedtls/library clean
 	-$(MAKE) -C src/circle-mbedtls clean
+	-cmake --build build/libc++ --target clean
 
 mrproper: clean
 	-rm -f Config.mk
 	-rm -rf build/circle-newlib/*
-	-rm -rf build/libcxx build/libcxx-fetch
+	-rm -rf build/libc++ build/libcxx-fetch install/aarch64-none-circle-libc++ install/aarch64-none-circle
