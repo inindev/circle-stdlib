@@ -4,10 +4,10 @@ project(FetchLLVM NONE)
 include(FetchContent)
 FetchContent_Declare(
     llvm_project
-    GIT_REPOSITORY https://github.com/llvm/llvm-project.git
-    GIT_TAG        llvmorg-22.1.2
-    GIT_SHALLOW    TRUE
-    SOURCE_DIR     "${CMAKE_CURRENT_SOURCE_DIR}/../../libs/llvm-project"
+    URL                      https://github.com/llvm/llvm-project/archive/ec6574e90e7c75f5e56d868bde85aaeffbb08266.tar.gz
+    URL_HASH                 SHA256=3f70284f6d2caf193b654193d7a7e68ed9b52956dba79cd6b6a535180263986f
+    DOWNLOAD_EXTRACT_TIMESTAMP FALSE
+    SOURCE_DIR               "${CMAKE_CURRENT_SOURCE_DIR}/../../libs/llvm-project"
 )
 
 FetchContent_GetProperties(llvm_project)

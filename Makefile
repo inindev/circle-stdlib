@@ -31,7 +31,13 @@ newlib:
 	$(MAKE) -C $(NEWLIB_BUILD_DIR) && \
 	$(MAKE) -C $(NEWLIB_BUILD_DIR) install
 
-libcxx_flags = $(ARCHCPU) --sysroot=$(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH) -isystem $(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH)/include -isystem $(CIRCLEHOME)/addon -isystem $(PWD)/include -D_GNU_SOURCE -D__circle__ -D_POSIX_C_SOURCE=200809L -U__FRACT_FBIT__
+
+# The attempt to build with libc++ tag llvmorg-22.1.2 caused build errors in charconv.cpp
+# One workaround was to add -U__FRACT_FBIT__, but there were more build errors.
+# The current solution is to use the newest commit of llvm-project, which is
+# newer than the latest release, and does not cause build errors.
+# TODO Switch to an official release once the build errors are fixed in the release version.
+libcxx_flags = $(ARCHCPU) --sysroot=$(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH) -isystem $(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH)/include -isystem $(CIRCLEHOME)/addon -isystem $(PWD)/include -D_GNU_SOURCE -D__circle__ -D_POSIX_C_SOURCE=200809L
 
 libcxx: $(LIBCXX_INSTALL_DIR)/lib/libc++.a
 
