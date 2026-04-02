@@ -168,19 +168,48 @@ void __libcpp_thread_sleep_for(chrono::nanoseconds const &__ns)
 // ---------------------------------------------------------------------------
 // Execute once
 //
-// Safe without locking: the cooperative scheduler only switches tasks at
-// explicit yield points, and __init_routine() runs without any yield.
+// Three-state flag: 0 = not started, 1 = in progress, 2 = done.
+//
+// If __init_routine() yields internally (e.g. via memory allocation or any
+// Circle API that calls Yield()), concurrent callers spin-yield in the inner
+// loop until the flag leaves state 1.
+//
+// If __init_routine() throws (exceptional call per the C++ spec), the flag is
+// reset to 0 and the exception propagates to the caller.  The outer loop
+// ensures that any task that exits the inner spin because the flag dropped
+// back to 0 retries from the top rather than returning success with an
+// uninitialised state.
 // ---------------------------------------------------------------------------
 
 int __libcpp_execute_once(__libcpp_exec_once_flag *__flag,
                           void (*__init_routine)())
 {
-    if (*__flag == 0)
+    while (true)
     {
-        *__flag = 1;
-        __init_routine();
+        if (*__flag == 2)
+            return 0;
+
+        if (*__flag == 0)
+        {
+            *__flag = 1;
+            try
+            {
+                __init_routine();
+            }
+            catch (...)
+            {
+                *__flag = 0; // allow a subsequent call to retry
+                throw;
+            }
+            *__flag = 2;
+            return 0;
+        }
+
+        // *__flag == 1: another task is initialising; spin-yield until it
+        // either succeeds (flag → 2) or throws (flag → 0).
+        while (*__flag == 1)
+            CScheduler::Get()->Yield();
     }
-    return 0;
 }
 
 // ---------------------------------------------------------------------------

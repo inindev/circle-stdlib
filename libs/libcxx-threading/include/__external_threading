@@ -28,9 +28,11 @@ using __libcpp_timespec_t _LIBCPP_NODEBUG = ::timespec;
 //
 // Mutex
 //
-// Opaque storage for CMutex (Circle's mutex is recursive by design).
-// Size covers CMutex on both ARM64 (32 B) and ARM32 (16 B).
-// Zero-initialised storage is a valid initial CMutex state.
+// Opaque storage for NonRecursiveMutexImpl (see src/mutex_impl.h).
+// std::mutex must be non-recursive; Circle's CMutex is recursive by design,
+// so a non-recursive semaphore-based wrapper is used instead.
+// Size: 32 B on ARM64, 20 B on ARM32 — both fit in __storage[32].
+// Zero-initialised storage is a valid initial state.
 //
 struct __libcpp_mutex_t
 {

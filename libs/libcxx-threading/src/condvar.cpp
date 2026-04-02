@@ -8,11 +8,11 @@
 //
 //   wait:
 //     ++waiters
-//     mutex.Release()      // may yield; if signal fires here, Up() buffers it
-//     in sem sem.Down()           // if count > 0 (signal already delivered):
-//     returns immediately
+//     mutex.Release()      // does not yield; sem.Down() below yields
+//     sem.Down()           // if count > 0 (signal already delivered):
+//                          //   returns immediately
 //                          // otherwise: blocks until signal/broadcast calls
-//                          Up()
+//                          //   Up()
 //     mutex.Acquire()
 //     // waiters already decremented by signaler
 //
@@ -29,7 +29,7 @@
 //     if (timedout):
 //       if sem.TryDown():        // racing signal arrived after timeout woke us
 //         timedout = false       //   signaler already decremented waiters;
-//         consume the Up
+//                                //   consume the Up
 //       else:
 //         --waiters              // genuine timeout: no signal consumed us
 //     mutex.Acquire()
@@ -41,8 +41,7 @@
 // decrement of waiters and leave an orphaned semaphore count.
 //
 
-#include <__external_threading>
-#include <circle/sched/mutex.h>
+#include "mutex_impl.h"
 #include <circle/sched/semaphore.h>
 #include <circle/timer.h>
 #include <new>
@@ -70,9 +69,9 @@ static CondvarImpl *as_condvar(__libcpp_condvar_t *__cv)
     return reinterpret_cast<CondvarImpl *>(__cv->__storage);
 }
 
-static CMutex *as_mutex(__libcpp_mutex_t *__m)
+static NonRecursiveMutexImpl *as_mutex(__libcpp_mutex_t *__m)
 {
-    return reinterpret_cast<CMutex *>(__m->__storage);
+    return as_nonrecursive_mutex(__m);
 }
 
 // ---------------------------------------------------------------------------
@@ -123,10 +122,10 @@ int __libcpp_condvar_broadcast(__libcpp_condvar_t *__cv)
 int __libcpp_condvar_wait(__libcpp_condvar_t *__cv, __libcpp_mutex_t *__m)
 {
     CondvarImpl *const impl = as_condvar(__cv);
-    CMutex *const mutex = as_mutex(__m);
+    NonRecursiveMutexImpl *const mutex = as_mutex(__m);
 
     ++impl->waiters;
-    mutex->Release(); // may yield; any concurrent signal is buffered in sem
+    mutex->Release(); // fully unlocks; any concurrent signal is buffered in sem
     impl->sem.Down(); // blocks until Up() is called (or returns immediately if
                       // already Up'd)
     mutex->Acquire();
@@ -137,7 +136,7 @@ int __libcpp_condvar_timedwait(__libcpp_condvar_t *__cv, __libcpp_mutex_t *__m,
                                __libcpp_timespec_t *__ts)
 {
     CondvarImpl *const impl = as_condvar(__cv);
-    CMutex *const mutex = as_mutex(__m);
+    NonRecursiveMutexImpl *const mutex = as_mutex(__m);
 
     long long const delta_us = timespec_diff_us(__ts);
 
@@ -145,7 +144,7 @@ int __libcpp_condvar_timedwait(__libcpp_condvar_t *__cv, __libcpp_mutex_t *__m,
     mutex->Release();
 
     // DownWithTimeout returns TRUE on timeout, FALSE if semaphore was acquired.
-    bool const timed_out = impl->sem.DownWithTimeout(
+    bool timed_out = impl->sem.DownWithTimeout(
         static_cast<unsigned>(delta_us < 0 ? 0 : delta_us));
 
     if (timed_out)
