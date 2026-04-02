@@ -37,6 +37,5 @@ include $(CIRCLEHOME)/Rules.mk
 # paths come before the newlib include path. Otherwise there are problems
 # with Circle's assert macros.
 INCLUDE += -I "$(NEWLIBDIR)/include" -I $(STDDEF_INCPATH) -I$(TOPDIR)/libs/doctest
-DEFINE	+= -D_POSIX_C_SOURCE=200112L
 
 -include $(DEPS)
