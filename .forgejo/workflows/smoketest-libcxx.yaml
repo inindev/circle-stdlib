@@ -88,6 +88,10 @@ jobs:
       - name: Build samples
         run: make build-samples
 
+      - name: Build test library
+        run: |
+          make -C tests/lib
+
       - name: Run smoke test with QEMU
         run: |
           cd samples/05-smoketest
