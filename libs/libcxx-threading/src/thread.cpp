@@ -15,28 +15,78 @@
 namespace std {
 
 // ---------------------------------------------------------------------------
-// CLibCXXTask — CTask subclass that runs a std::thread entry function
+// Thread-local storage state
 // ---------------------------------------------------------------------------
+unsigned constexpr MAX_TLS_KEYS = 32;
+
+static void (*s_destructors[MAX_TLS_KEYS])(void *) = {};
+static unsigned s_next_key = 0;
+
+// ---------------------------------------------------------------------------
+// CLibCXXTask — CTask subclass that runs a std::thread entry function
+//
+// __libcpp_thread_t::__opaque points at a heap-allocated JoinHandle (below),
+// NOT at the CTask directly.  This keeps join() and detach() safe after the
+// scheduler has already deleted the CTask via its unconditional
+// `delete pTask` in GetNextTask().
+//
+// JoinHandle ownership rules:
+//   - join()  : reads task (may be nullptr), then deletes the handle.
+//   - detach(): sets detached = true; if task is already nullptr, deletes
+//               handle immediately; otherwise ~CLibCXXTask() will delete it.
+//   - ~CLibCXXTask(): always nulls task; deletes handle when detached or joined.
+// ---------------------------------------------------------------------------
+
+class CLibCXXTask;
+
+struct JoinHandle {
+    CLibCXXTask *task;
+    uintptr_t    id;     // Stable cached thread ID
+    bool         detached;
+    bool         joined;
+};
 
 class CLibCXXTask : public CTask {
 public:
-    CLibCXXTask(void *(*func)(void *), void *arg)
+    CLibCXXTask(void *(*func)(void *), void *arg, JoinHandle *handle)
         : CTask(TASK_STACK_SIZE),
           m_func(func),
           m_arg(arg),
-          m_result(nullptr),
-          m_detached(false) {}
+          m_handle(handle) {}
 
-    void Run() override {
-        m_result = m_func(m_arg);
+    ~CLibCXXTask() override {
+        m_handle->task = nullptr;
+        if (m_handle->detached || m_handle->joined)
+            delete m_handle;
     }
 
-    void   *m_result;
-    bool    m_detached;
+    void Run() override {
+        m_func(m_arg);
+
+        void ** const slots = static_cast<void **>(GetUserData(TASK_USER_DATA_USER));
+        if (slots) {
+            int constexpr PTHREAD_DESTRUCTOR_ITERATIONS = 4;
+            bool destructors_called = true;
+            for (int i = 0; i < PTHREAD_DESTRUCTOR_ITERATIONS && destructors_called; ++i) {
+                destructors_called = false;
+                for (unsigned k = 0; k < s_next_key; ++k) {
+                    if (slots[k] && s_destructors[k]) {
+                        void * const val = slots[k];
+                        slots[k] = nullptr;
+                        s_destructors[k](val);
+                        destructors_called = true;
+                    }
+                }
+            }
+            delete[] slots;
+            SetUserData(nullptr, TASK_USER_DATA_USER);
+        }
+    }
 
 private:
     void *(*m_func)(void *);
     void   *m_arg;
+    JoinHandle *m_handle;
 };
 
 // ---------------------------------------------------------------------------
@@ -44,7 +94,11 @@ private:
 // ---------------------------------------------------------------------------
 
 int __libcpp_thread_create(__libcpp_thread_t *__t, void *(*__func)(void *), void *__arg) {
-    __t->__opaque = new CLibCXXTask(__func, __arg);
+    JoinHandle * const h = new JoinHandle{nullptr, 0, false, false};
+    CLibCXXTask * const task = new CLibCXXTask(__func, __arg, h);
+    h->task = task;
+    h->id = reinterpret_cast<uintptr_t>(task);
+    __t->__opaque = h;
     return 0;
 }
 
@@ -53,18 +107,28 @@ __libcpp_thread_id __libcpp_thread_get_current_id() {
 }
 
 __libcpp_thread_id __libcpp_thread_get_id(__libcpp_thread_t const *__t) {
-    return reinterpret_cast<uintptr_t>(__t->__opaque);
+    JoinHandle const * const h = static_cast<JoinHandle const *>(__t->__opaque);
+    return h->id;
 }
 
 int __libcpp_thread_join(__libcpp_thread_t *__t) {
-    CLibCXXTask * const task = static_cast<CLibCXXTask *>(__t->__opaque);
-    task->WaitForTermination();
+    JoinHandle * const h = static_cast<JoinHandle *>(__t->__opaque);
+    if (h->task == nullptr) {
+        delete h;
+    } else {
+        h->joined = true;
+        h->task->WaitForTermination();
+    }
     __t->__opaque = nullptr;
     return 0;
 }
 
 int __libcpp_thread_detach(__libcpp_thread_t *__t) {
-    static_cast<CLibCXXTask *>(__t->__opaque)->m_detached = true;
+    JoinHandle * const h = static_cast<JoinHandle *>(__t->__opaque);
+    h->detached = true;
+    if (h->task == nullptr)
+        delete h;
+    // else ~CLibCXXTask() will delete h when the task eventually terminates
     __t->__opaque = nullptr;
     return 0;
 }
@@ -103,11 +167,6 @@ int __libcpp_execute_once(__libcpp_exec_once_flag *__flag, void (*__init_routine
 // A global table maps key index → destructor. Keys are assigned with a
 // monotonic counter.
 // ---------------------------------------------------------------------------
-
-static constexpr unsigned MAX_TLS_KEYS = 32;
-
-static void (*s_destructors[MAX_TLS_KEYS])(void *) = {};
-static unsigned s_next_key = 0;
 
 int __libcpp_tls_create(__libcpp_tls_key *__key, void (*__at_exit)(void *)) {
     unsigned const k = s_next_key++;
