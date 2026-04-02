@@ -6,13 +6,12 @@
 //
 
 #include <__external_threading>
-
 #include <circle/sched/scheduler.h>
 #include <circle/sched/task.h>
-
 #include <new>
 
-namespace std {
+namespace std
+{
 
 // ---------------------------------------------------------------------------
 // Thread-local storage state
@@ -34,44 +33,54 @@ static unsigned s_next_key = 0;
 //   - join()  : reads task (may be nullptr), then deletes the handle.
 //   - detach(): sets detached = true; if task is already nullptr, deletes
 //               handle immediately; otherwise ~CLibCXXTask() will delete it.
-//   - ~CLibCXXTask(): always nulls task; deletes handle when detached or joined.
+//   - ~CLibCXXTask(): always nulls task; deletes handle when detached or
+//   joined.
 // ---------------------------------------------------------------------------
 
 class CLibCXXTask;
 
-struct JoinHandle {
+struct JoinHandle
+{
     CLibCXXTask *task;
-    uintptr_t    id;     // Stable cached thread ID
-    bool         detached;
-    bool         joined;
+    uintptr_t id; // Stable cached thread ID
+    bool detached;
+    bool joined;
 };
 
-class CLibCXXTask : public CTask {
+class CLibCXXTask : public CTask
+{
 public:
     CLibCXXTask(void *(*func)(void *), void *arg, JoinHandle *handle)
-        : CTask(TASK_STACK_SIZE),
-          m_func(func),
-          m_arg(arg),
-          m_handle(handle) {}
+        : CTask(TASK_STACK_SIZE), m_func(func), m_arg(arg), m_handle(handle)
+    {
+    }
 
-    ~CLibCXXTask() override {
+    ~CLibCXXTask() override
+    {
         m_handle->task = nullptr;
         if (m_handle->detached || m_handle->joined)
             delete m_handle;
     }
 
-    void Run() override {
+    void Run() override
+    {
         m_func(m_arg);
 
-        void ** const slots = static_cast<void **>(GetUserData(TASK_USER_DATA_USER));
-        if (slots) {
+        void **const slots =
+            static_cast<void **>(GetUserData(TASK_USER_DATA_USER));
+        if (slots)
+        {
             int constexpr PTHREAD_DESTRUCTOR_ITERATIONS = 4;
             bool destructors_called = true;
-            for (int i = 0; i < PTHREAD_DESTRUCTOR_ITERATIONS && destructors_called; ++i) {
+            for (int i = 0;
+                 i < PTHREAD_DESTRUCTOR_ITERATIONS && destructors_called; ++i)
+            {
                 destructors_called = false;
-                for (unsigned k = 0; k < s_next_key; ++k) {
-                    if (slots[k] && s_destructors[k]) {
-                        void * const val = slots[k];
+                for (unsigned k = 0; k < s_next_key; ++k)
+                {
+                    if (slots[k] && s_destructors[k])
+                    {
+                        void *const val = slots[k];
                         slots[k] = nullptr;
                         s_destructors[k](val);
                         destructors_called = true;
@@ -85,7 +94,7 @@ public:
 
 private:
     void *(*m_func)(void *);
-    void   *m_arg;
+    void *m_arg;
     JoinHandle *m_handle;
 };
 
@@ -93,29 +102,37 @@ private:
 // Thread
 // ---------------------------------------------------------------------------
 
-int __libcpp_thread_create(__libcpp_thread_t *__t, void *(*__func)(void *), void *__arg) {
-    JoinHandle * const h = new JoinHandle{nullptr, 0, false, false};
-    CLibCXXTask * const task = new CLibCXXTask(__func, __arg, h);
+int __libcpp_thread_create(__libcpp_thread_t *__t, void *(*__func)(void *),
+                           void *__arg)
+{
+    JoinHandle *const h = new JoinHandle{nullptr, 0, false, false};
+    CLibCXXTask *const task = new CLibCXXTask(__func, __arg, h);
     h->task = task;
     h->id = reinterpret_cast<uintptr_t>(task);
     __t->__opaque = h;
     return 0;
 }
 
-__libcpp_thread_id __libcpp_thread_get_current_id() {
+__libcpp_thread_id __libcpp_thread_get_current_id()
+{
     return reinterpret_cast<uintptr_t>(CScheduler::Get()->GetCurrentTask());
 }
 
-__libcpp_thread_id __libcpp_thread_get_id(__libcpp_thread_t const *__t) {
-    JoinHandle const * const h = static_cast<JoinHandle const *>(__t->__opaque);
+__libcpp_thread_id __libcpp_thread_get_id(__libcpp_thread_t const *__t)
+{
+    JoinHandle const *const h = static_cast<JoinHandle const *>(__t->__opaque);
     return h->id;
 }
 
-int __libcpp_thread_join(__libcpp_thread_t *__t) {
-    JoinHandle * const h = static_cast<JoinHandle *>(__t->__opaque);
-    if (h->task == nullptr) {
+int __libcpp_thread_join(__libcpp_thread_t *__t)
+{
+    JoinHandle *const h = static_cast<JoinHandle *>(__t->__opaque);
+    if (h->task == nullptr)
+    {
         delete h;
-    } else {
+    }
+    else
+    {
         h->joined = true;
         h->task->WaitForTermination();
     }
@@ -123,8 +140,9 @@ int __libcpp_thread_join(__libcpp_thread_t *__t) {
     return 0;
 }
 
-int __libcpp_thread_detach(__libcpp_thread_t *__t) {
-    JoinHandle * const h = static_cast<JoinHandle *>(__t->__opaque);
+int __libcpp_thread_detach(__libcpp_thread_t *__t)
+{
+    JoinHandle *const h = static_cast<JoinHandle *>(__t->__opaque);
     h->detached = true;
     if (h->task == nullptr)
         delete h;
@@ -133,11 +151,13 @@ int __libcpp_thread_detach(__libcpp_thread_t *__t) {
     return 0;
 }
 
-void __libcpp_thread_yield() {
+void __libcpp_thread_yield()
+{
     CScheduler::Get()->Yield();
 }
 
-void __libcpp_thread_sleep_for(chrono::nanoseconds const &__ns) {
+void __libcpp_thread_sleep_for(chrono::nanoseconds const &__ns)
+{
     long long const us = __ns.count() / 1000LL;
     if (us > 0)
         CScheduler::Get()->usSleep(static_cast<unsigned>(us));
@@ -152,8 +172,11 @@ void __libcpp_thread_sleep_for(chrono::nanoseconds const &__ns) {
 // explicit yield points, and __init_routine() runs without any yield.
 // ---------------------------------------------------------------------------
 
-int __libcpp_execute_once(__libcpp_exec_once_flag *__flag, void (*__init_routine)()) {
-    if (*__flag == 0) {
+int __libcpp_execute_once(__libcpp_exec_once_flag *__flag,
+                          void (*__init_routine)())
+{
+    if (*__flag == 0)
+    {
         *__flag = 1;
         __init_routine();
     }
@@ -168,23 +191,27 @@ int __libcpp_execute_once(__libcpp_exec_once_flag *__flag, void (*__init_routine
 // monotonic counter.
 // ---------------------------------------------------------------------------
 
-int __libcpp_tls_create(__libcpp_tls_key *__key, void (*__at_exit)(void *)) {
+int __libcpp_tls_create(__libcpp_tls_key *__key, void (*__at_exit)(void *))
+{
     unsigned const k = s_next_key++;
     s_destructors[k] = __at_exit;
     *__key = k;
     return 0;
 }
 
-void *__libcpp_tls_get(__libcpp_tls_key __key) {
-    void ** const slots = static_cast<void **>(
+void *__libcpp_tls_get(__libcpp_tls_key __key)
+{
+    void **const slots = static_cast<void **>(
         CScheduler::Get()->GetCurrentTask()->GetUserData(TASK_USER_DATA_USER));
     return slots ? slots[__key] : nullptr;
 }
 
-int __libcpp_tls_set(__libcpp_tls_key __key, void *__p) {
-    CTask * const task = CScheduler::Get()->GetCurrentTask();
+int __libcpp_tls_set(__libcpp_tls_key __key, void *__p)
+{
+    CTask *const task = CScheduler::Get()->GetCurrentTask();
     void **slots = static_cast<void **>(task->GetUserData(TASK_USER_DATA_USER));
-    if (!slots) {
+    if (!slots)
+    {
         slots = new void *[MAX_TLS_KEYS]();
         task->SetUserData(slots, TASK_USER_DATA_USER);
     }
