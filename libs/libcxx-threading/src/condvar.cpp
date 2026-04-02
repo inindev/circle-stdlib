@@ -41,13 +41,14 @@
 // decrement of waiters and leave an orphaned semaphore count.
 //
 
+#include <__external_threading>
 #include "mutex_impl.h"
 #include <circle/sched/semaphore.h>
 #include <circle/timer.h>
 #include <new>
 
-namespace std
-{
+_LIBCPP_BEGIN_NAMESPACE_STD
+
 
 // ---------------------------------------------------------------------------
 // CondvarImpl — overlaid on __libcpp_condvar_t::__storage
@@ -175,4 +176,4 @@ int __libcpp_condvar_destroy(__libcpp_condvar_t *__cv)
     return 0;
 }
 
-} // namespace std
+_LIBCPP_END_NAMESPACE_STD

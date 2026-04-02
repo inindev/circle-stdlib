@@ -10,8 +10,7 @@
 #include <circle/sched/task.h>
 #include <new>
 
-namespace std
-{
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 // ---------------------------------------------------------------------------
 // Thread-local storage state
@@ -248,4 +247,4 @@ int __libcpp_tls_set(__libcpp_tls_key __key, void *__p)
     return 0;
 }
 
-} // namespace std
+_LIBCPP_END_NAMESPACE_STD

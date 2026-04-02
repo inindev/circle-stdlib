@@ -284,6 +284,7 @@ if [ ${LIBCXX_ENABLED} -eq 1 ]
 then
     SYSTEM_INCPATHS=('$(LIBCXX_INSTALL_DIR)/include'
         '$(LIBCXX_INSTALL_DIR)/include/c++/v1'
+        '$(LIBCXX_THREADING_INSTALL_DIR)/include'
         "${STDDEF_INCPATH}" '$(CIRCLE_STDLIB_INSTALL_DIR)/include')
 else
     SYSTEM_INCPATHS=("${CXX_INCPATHS[@]}" "${STDDEF_INCPATH}" '$(CIRCLE_STDLIB_INSTALL_DIR)/include')
@@ -333,12 +334,14 @@ echo "CFLAGS_ISYSTEM='$CFLAGS_ISYSTEM'"
     if [ ${LIBCXX_ENABLED} -eq 1 ]
     then
         echo 'LIBCXX_INSTALL_DIR = $(CIRCLE_STDLIB_INSTALL_DIR)-libc++'
+        echo 'LIBCXX_THREADING_INSTALL_DIR = $(CIRCLE_STDLIB_INSTALL_DIR)-libc++-threading'
         echo "LDFLAGS += --eh-frame-hdr"
         echo "DEFINE += -D_GNU_SOURCE -D_POSIX_C_SOURCE=200809L"
         echo 'CIRCLE_STDLIB_LIBS = \'
         echo '    $(LIBCXX_INSTALL_DIR)/lib/libc++.a \'
         echo '    $(LIBCXX_INSTALL_DIR)/lib/libc++abi.a \'
         echo '    $(LIBCXX_INSTALL_DIR)/lib/libunwind.a \'
+        echo '    $(LIBCXX_THREADING_INSTALL_DIR)/lib/liblibcxx-threading.a \'
         echo '    $(CIRCLE_STDLIB_INSTALL_DIR)/lib/libm.a \'
         echo '    $(CIRCLE_STDLIB_INSTALL_DIR)/lib/libc.a \'
         echo '    $(CIRCLE_STDLIB_INSTALL_DIR)/lib/libcirclenewlib.a \'

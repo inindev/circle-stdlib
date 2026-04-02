@@ -5,12 +5,13 @@
 // framework.
 //
 
+#include <__external_threading>
 #include "mutex_impl.h"
 #include <circle/sched/mutex.h>
 #include <new>
 
-namespace std
-{
+_LIBCPP_BEGIN_NAMESPACE_STD
+
 
 // ---------------------------------------------------------------------------
 // Non-recursive mutex (backed by NonRecursiveMutexImpl, not CMutex)
@@ -89,4 +90,4 @@ int __libcpp_recursive_mutex_destroy(__libcpp_recursive_mutex_t *__m)
     return 0;
 }
 
-} // namespace std
+_LIBCPP_END_NAMESPACE_STD
