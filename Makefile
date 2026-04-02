@@ -3,7 +3,7 @@
 include Config.mk
 
 ifdef LIBCXX_INSTALL_DIR
-all: circle newlib $(MBEDTLS) libcxx
+all: circle newlib $(MBEDTLS) libcxx libcxx-threading
 else
 all: circle newlib $(MBEDTLS)
 endif
@@ -37,7 +37,7 @@ newlib:
 # The current solution is to use the newest commit of llvm-project, which is
 # newer than the latest release, and does not cause build errors.
 # TODO Switch to an official release once the build errors are fixed in the release version.
-libcxx_flags = $(ARCHCPU) --sysroot=$(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH) -isystem $(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH)/include -isystem $(CIRCLEHOME)/addon -isystem $(PWD)/include -D_GNU_SOURCE -D__circle__ -D_POSIX_C_SOURCE=200809L -U__FRACT_FBIT__
+libcxx_flags = $(ARCHCPU) --sysroot=$(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH) -isystem $(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH)/include -isystem $(CIRCLEHOME)/addon -isystem $(PWD)/include -isystem $(PWD)/libs/libcxx-threading/include -D_GNU_SOURCE -D__circle__ -D_POSIX_C_SOURCE=200809L -D_POSIX_TIMERS=1 -U__FRACT_FBIT__
 
 libcxx: $(LIBCXX_INSTALL_DIR)/lib/libc++.a
 
@@ -67,6 +67,22 @@ $(LIBCXX_INSTALL_DIR)/lib/libc++.a:
 	cmake --build build/libc++ --verbose --target cxx --target cxxabi --target unwind
 	@echo "Installing libc++..."
 	cmake --build build/libc++ --target install
+
+libcxx-threading: $(LIBCXX_INSTALL_DIR)/lib/libc++.a
+	@echo "Configuring libcxx-threading..."
+	cmake \
+		-S libs/libcxx-threading \
+		-B build/libcxx-threading \
+		-G Ninja \
+		-DCIRCLE_INCLUDE_DIR=$(CIRCLEHOME)/include \
+		-DLIBCXX_INCLUDE_DIR=$(LIBCXX_INSTALL_DIR)/include/c++/v1 \
+		-DNEWLIB_INCLUDE_DIR=$(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH)/include \
+		-DCMAKE_INSTALL_PREFIX=$(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH)-libc++-threading \
+		-DCMAKE_TOOLCHAIN_FILE=$(PWD)/cmake/toolchains/toolchain-$(NEWLIB_ARCH).cmake
+	@echo "Building libcxx-threading..."
+	cmake --build build/libcxx-threading
+	@echo "Installing libcxx-threading..."
+	cmake --install build/libcxx-threading
 
 build-stdlib-samples:
 	$(MAKE) -C samples/01-nosys
@@ -125,8 +141,10 @@ clean: clean-stdlib-samples clean-mbedtls-samples clean-tests
 	-$(MAKE) -C libs/mbedtls/library clean
 	-$(MAKE) -C src/circle-mbedtls clean
 	-cmake --build build/libc++ --target clean
+	-cmake --build build/libcxx-threading --target clean
 
 mrproper: clean
 	-rm -f Config.mk
 	-rm -rf build/circle-newlib/*
-	-rm -rf build/libc++ build/libcxx-fetch install/aarch64-none-circle-libc++ install/aarch64-none-circle
+	-rm -rf build/libc++ build/libcxx-fetch install/$(NEWLIB_ARCH)-libc++ install/$(NEWLIB_ARCH)-libc++-threading
+	-rm -rf build/libcxx-threading install/$(NEWLIB_ARCH)-libc++ install/$(NEWLIB_ARCH)-libc++-threading

@@ -1,3 +1,4 @@
 /circle-newlib
 /libc++
 /libcxx-fetch
+/libcxx-threading
