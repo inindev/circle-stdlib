@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - 'libc\+\+-build'
+      - 'libc\+\+-build-threads'
 
 jobs:
   test-libcxx:
@@ -70,6 +71,13 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Setup environment variables from matrix
+        run: |
+          echo "CFG_QEMU_BIN=${{ matrix.config.qemu-bin }}" >> $GITHUB_ENV
+          echo "CFG_QEMU_MACHINE=${{ matrix.config.qemu-machine }}" >> $GITHUB_ENV
+          echo "CFG_QEMU_OPT=${{ matrix.config.qemu-kernel-opt }}" >> $GITHUB_ENV
+          echo "CFG_QEMU_IMG=${{ matrix.config.qemu-img }}" >> $GITHUB_ENV
+
       - name: Configure circle-stdlib with QEMU support and libc++
         run: |
           ./configure -p ${{ matrix.config.prefix }} -r ${{ matrix.config.circle-machine }} --qemu --libcxx
@@ -86,3 +94,8 @@ jobs:
           ../../testdata/setup-sd.sh
           ulimit -t 300
           ${{ matrix.config.qemu-bin }} -M ${{ matrix.config.qemu-machine }} ${{ matrix.config.qemu-kernel-opt }} ${{ matrix.config.qemu-img }} -display none -nographic -semihosting -sd sdcard.img
+
+      - name: Run basic thread test
+        run: |
+          cd tests/06-basic-thread
+          ./run_test.sh
