@@ -4,6 +4,7 @@
 #include <string>
 #include <thread>
 #include <exception>
+#include <condition_variable>
 
 int main(void)
 {
@@ -36,7 +37,11 @@ TEST_CASE("Basic thread operations")
     MESSAGE("Thread test successful");
 }
 
-TEST_CASE("std::call_once example")
+/*
+ * Test std::call_once.
+ * based on https://en.cppreference.com/w/cpp/thread/call_once
+ */
+TEST_CASE("std::call_once test")
 {
     std::once_flag flag1, flag2;
     int simple_called = 0;
@@ -98,4 +103,59 @@ TEST_CASE("std::call_once example")
 
     REQUIRE(may_throw_did_not_throw == 1);
     REQUIRE(may_throw_called >= 1);
+}
+
+/*
+ * Test std::condition_variable example
+ * based on https://en.cppreference.com/w/cpp/thread/condition_variable
+ */
+TEST_CASE("std::condition_variable test")
+{
+    std::mutex m;
+    std::condition_variable cv;
+    std::string data;
+    bool ready = false;
+    bool processed = false;
+
+    auto worker_thread = [&m, &cv, &data, &ready, &processed]()
+    {
+        // wait until main() sends data
+        std::unique_lock<std::mutex> lk(m);
+        cv.wait(lk, [&ready]{ return ready; });
+
+        // after the wait, we own the lock
+        MESSAGE("Worker thread is processing data");
+        data += " after processing";
+
+        // send data back to main()
+        processed = true;
+        MESSAGE("Worker thread signals data processing completed");
+
+        // manual unlocking is done before notifying, to avoid waking up
+        // the waiting thread only to block again (see notify_one for details)
+        lk.unlock();
+        cv.notify_one();
+    };
+
+    MESSAGE("Testing std::condition_variable with 2 threads");
+    std::thread worker(worker_thread);
+
+    data = "Example data";
+    // send data to the worker thread
+    {
+        std::lock_guard<std::mutex> lk(m);
+        ready = true;
+        MESSAGE("main() signals data ready for processing");
+    }
+    cv.notify_one();
+
+    // wait for the worker
+    {
+        std::unique_lock<std::mutex> lk(m);
+        cv.wait(lk, [&processed]{ return processed; });
+    }
+    MESSAGE("Back in main(), data checked");
+    REQUIRE(data == "Example data after processing");
+
+    worker.join();
 }
