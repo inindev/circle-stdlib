@@ -52,6 +52,7 @@ $(LIBCXX_INSTALL_DIR)/lib/libc++.a:
 		-G Ninja \
 		-DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
 		-DCMAKE_TOOLCHAIN_FILE="$(PWD)/cmake/toolchains/toolchain-$(NEWLIB_ARCH).cmake" \
+		-DCIRCLE_ARCHCPU="$(ARCHCPU)" \
 		-DRUNTIMES_USE_LIBC=newlib \
 		-DCMAKE_BUILD_TYPE=Debug \
 		-DCMAKE_C_FLAGS="$(libcxx_flags)" \
@@ -78,6 +79,7 @@ libcxx-threading: $(LIBCXX_INSTALL_DIR)/lib/libc++.a
 		-DLIBCXX_INCLUDE_DIR=$(LIBCXX_INSTALL_DIR)/include/c++/v1 \
 		-DNEWLIB_INCLUDE_DIR=$(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH)/include \
 		-DCMAKE_INSTALL_PREFIX=$(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH)-libc++-threading \
+		-DCIRCLE_ARCHCPU="$(ARCHCPU)" \
 		-DCMAKE_TOOLCHAIN_FILE=$(PWD)/cmake/toolchains/toolchain-$(NEWLIB_ARCH).cmake
 	@echo "Building libcxx-threading..."
 	cmake --build build/libcxx-threading

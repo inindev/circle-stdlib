@@ -6,7 +6,7 @@ set(CMAKE_CXX_COMPILER aarch64-none-elf-g++)
 set(CMAKE_ASM_COMPILER aarch64-none-elf-gcc)
 
 # Optimization and CPU flags
-set(FLAGS "-mcpu=cortex-a53 -ffreestanding -mstrict-align")
+set(FLAGS "${CIRCLE_ARCHCPU} -ffreestanding -mstrict-align")
 
 set(CMAKE_C_FLAGS "${FLAGS}" CACHE STRING "")
 set(CMAKE_CXX_FLAGS "${FLAGS}" CACHE STRING "")

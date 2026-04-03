@@ -6,7 +6,7 @@ set(CMAKE_CXX_COMPILER arm-none-eabi-g++)
 set(CMAKE_ASM_COMPILER arm-none-eabi-gcc)
 
 # Optimization and CPU flags
-set(FLAGS "-mcpu=cortex-a53 -ffreestanding -mstrict-align")
+set(FLAGS "${CIRCLE_ARCHCPU} -ffreestanding -mno-unaligned-access")
 
 set(CMAKE_C_FLAGS "${FLAGS}" CACHE STRING "")
 set(CMAKE_CXX_FLAGS "${FLAGS}" CACHE STRING "")
