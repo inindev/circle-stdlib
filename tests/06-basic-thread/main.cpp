@@ -9,6 +9,7 @@
 #include <vector>
 #include <numeric>
 #include <chrono>
+#include <atomic>
 
 int main(void)
 {
@@ -203,4 +204,41 @@ TEST_CASE("std::promise and std::future test")
     std::thread new_work_thread(do_work_func, std::move(barrier));
     barrier_future.wait();
     new_work_thread.join();
+}
+
+/*
+ * Test thread_local variables
+ */
+TEST_CASE("thread_local test")
+{
+    static std::atomic<int> destructor_count{0};
+    
+    struct ThreadLocalData {
+        int value;
+        ThreadLocalData() : value(0) {}
+        ~ThreadLocalData() {
+            destructor_count++;
+        }
+    };
+    
+    auto thread_func = [](int id) {
+        thread_local ThreadLocalData tl_data;
+        tl_data.value = id;
+        
+        std::this_thread::yield();
+        
+        REQUIRE(tl_data.value == id);
+    };
+
+    MESSAGE("Creating 3 threads to test thread_local");
+    std::thread t1(thread_func, 1);
+    std::thread t2(thread_func, 2);
+    std::thread t3(thread_func, 3);
+    
+    t1.join();
+    t2.join();
+    t3.join();
+    
+    REQUIRE(destructor_count.load() == 3);
+    MESSAGE("thread_local destructors executed correctly");
 }

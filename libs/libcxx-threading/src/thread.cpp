@@ -252,3 +252,55 @@ int __libcpp_tls_set(__libcpp_tls_key __key, void *__p)
 }
 
 _LIBCPP_END_NAMESPACE_STD
+
+// ---------------------------------------------------------------------------
+// __cxa_thread_atexit
+//
+// Required by the compiler to register destructors for thread_local variables.
+// Uses the TLS mechanism above to store a linked list of destructors per thread.
+// ---------------------------------------------------------------------------
+
+struct CXAThreadAtexitNode
+{
+    void (*dtor)(void *);
+    void *obj;
+    void *dso_symbol;
+    CXAThreadAtexitNode *next;
+};
+
+static std::__libcpp_tls_key s_cxa_thread_atexit_key;
+static std::__libcpp_exec_once_flag s_cxa_thread_atexit_flag = _LIBCPP_EXEC_ONCE_INITIALIZER;
+
+static void cxa_thread_atexit_dtor(void *arg)
+{
+    CXAThreadAtexitNode *node = static_cast<CXAThreadAtexitNode *>(arg);
+    while (node)
+    {
+        node->dtor(node->obj);
+        CXAThreadAtexitNode *const next = node->next;
+        delete node;
+        node = next;
+    }
+}
+
+static void cxa_thread_atexit_init()
+{
+    std::__libcpp_tls_create(&s_cxa_thread_atexit_key, cxa_thread_atexit_dtor);
+}
+
+extern "C" int __cxa_thread_atexit(void (*dtor)(void *), void *obj, void *dso_symbol)
+{
+    std::__libcpp_execute_once(&s_cxa_thread_atexit_flag, cxa_thread_atexit_init);
+
+    CXAThreadAtexitNode *const node = new (std::nothrow) CXAThreadAtexitNode{dtor, obj, dso_symbol, nullptr};
+    if (!node)
+    {
+        return -1;
+    }
+
+    CXAThreadAtexitNode *const head = static_cast<CXAThreadAtexitNode *>(std::__libcpp_tls_get(s_cxa_thread_atexit_key));
+    node->next = head;
+    std::__libcpp_tls_set(s_cxa_thread_atexit_key, node);
+
+    return 0;
+}

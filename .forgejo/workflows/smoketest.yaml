@@ -7,6 +7,7 @@ on:
       - master
       - develop
       - 'libc\+\+-build'
+      - 'libc\+\+-build-threads'
 
 jobs:
   test:
