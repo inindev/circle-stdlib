@@ -5,6 +5,10 @@
 #include <thread>
 #include <exception>
 #include <condition_variable>
+#include <future>
+#include <vector>
+#include <numeric>
+#include <chrono>
 
 int main(void)
 {
@@ -158,4 +162,45 @@ TEST_CASE("std::condition_variable test")
     REQUIRE(data == "Example data after processing");
 
     worker.join();
+}
+
+/*
+ * Test std::promise and std::future
+ * based on https://en.cppreference.com/w/cpp/thread/promise
+ */
+TEST_CASE("std::promise and std::future test")
+{
+    auto accumulate_func = [](std::vector<int>::iterator first,
+                              std::vector<int>::iterator last,
+                              std::promise<int> accumulate_promise)
+    {
+        int sum = std::accumulate(first, last, 0);
+        accumulate_promise.set_value(sum);  // Notify future
+    };
+
+    auto do_work_func = [](std::promise<void> barrier)
+    {
+        MESSAGE("Worker thread sleeping for a bit");
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        barrier.set_value();
+    };
+
+    MESSAGE("Demonstrate using promise<int>");
+    std::vector<int> numbers = {1, 2, 3, 4, 5, 6};
+    std::promise<int> accumulate_promise;
+    std::future<int> accumulate_future = accumulate_promise.get_future();
+    std::thread work_thread(accumulate_func, numbers.begin(), numbers.end(),
+                            std::move(accumulate_promise));
+
+    int result = accumulate_future.get();
+    MESSAGE("result=" << result);
+    REQUIRE(result == 21);
+    work_thread.join();
+
+    MESSAGE("Demonstrate using promise<void>");
+    std::promise<void> barrier;
+    std::future<void> barrier_future = barrier.get_future();
+    std::thread new_work_thread(do_work_func, std::move(barrier));
+    barrier_future.wait();
+    new_work_thread.join();
 }
