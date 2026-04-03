@@ -50,6 +50,8 @@ struct JoinHandle
 class CLibCXXTask : public CTask
 {
 public:
+    // Threads with C++ exception handling need a larger stack to accommodate
+    // unwinder state.
     CLibCXXTask(void *(*func)(void *), void *arg, JoinHandle *handle)
         : CTask(TASK_STACK_SIZE * 4), m_func(func), m_arg(arg), m_handle(handle)
     {
@@ -241,6 +243,7 @@ int __libcpp_tls_set(__libcpp_tls_key __key, void *__p)
     void **slots = static_cast<void **>(task->GetUserData(TASK_USER_DATA_USER));
     if (!slots)
     {
+        // Initialize with nullptrs.
         slots = new void *[MAX_TLS_KEYS]();
         task->SetUserData(slots, TASK_USER_DATA_USER);
     }
