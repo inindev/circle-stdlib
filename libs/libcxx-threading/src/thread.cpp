@@ -9,6 +9,7 @@
 #include <circle/sched/scheduler.h>
 #include <circle/sched/task.h>
 #include <new>
+#include <cstdint>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -50,7 +51,7 @@ class CLibCXXTask : public CTask
 {
 public:
     CLibCXXTask(void *(*func)(void *), void *arg, JoinHandle *handle)
-        : CTask(TASK_STACK_SIZE), m_func(func), m_arg(arg), m_handle(handle)
+        : CTask(TASK_STACK_SIZE * 4), m_func(func), m_arg(arg), m_handle(handle)
     {
     }
 
