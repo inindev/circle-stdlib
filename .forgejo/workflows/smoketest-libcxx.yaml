@@ -48,7 +48,7 @@ jobs:
           - {
               name: "host-aarch64-target-aarch64",
               runs-on: ubuntu-arm-22.04,
-              container: "codeberg.org/larchcone/ci/node-circle-stdlib-aarch64:gcc15-v1,
+              container: "codeberg.org/larchcone/ci/node-circle-stdlib-aarch64:gcc15-v1",
               prefix: "aarch64-none-elf-",
               circle-machine: "3",
               qemu-bin: "qemu-system-aarch64",
