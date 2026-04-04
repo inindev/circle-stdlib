@@ -10,6 +10,7 @@
 #include <circle/sched/task.h>
 #include <new>
 #include <cstdint>
+#include <cstring>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -20,6 +21,111 @@ unsigned constexpr MAX_TLS_KEYS = 32;
 
 static void (*s_destructors[MAX_TLS_KEYS])(void *) = {};
 static unsigned s_next_key = 0;
+
+// ---------------------------------------------------------------------------
+// Per-task TLS state — stored in TASK_USER_DATA_USER (slot 2).
+//
+// tls_block: heap allocation for the hardware TLS block; TPIDR_EL0/TPIDR is
+//            set to point here on every context switch into this task.
+// kv:        key-value slots for __libcpp_tls_get/set (formerly raw void*[]).
+// ---------------------------------------------------------------------------
+
+struct TaskTLSData
+{
+    void *tls_block;
+    void *kv[MAX_TLS_KEYS];
+};
+
+// ---------------------------------------------------------------------------
+// Linker-exported TLS section boundaries (defined in circle.ld).
+// Used to compute the hardware TLS block size and .tdata initialisation image.
+// ---------------------------------------------------------------------------
+
+extern "C" char __tdata_start[];
+extern "C" char __tdata_end[];
+extern "C" char __tbss_start[];
+extern "C" char __tbss_end[];
+
+// ---------------------------------------------------------------------------
+// Hardware thread-pointer access.
+//
+// AArch64 variant-1 TLS: TPIDR_EL0 points to the start of the TLS block;
+// .tdata/.tbss follow a 16-byte Thread Control Block (TCB).
+//
+// ARM32: TPIDRURW (cp15 c13 c0 2) is used for write; read via TPIDRURO
+// (cp15 c13 c0 3). TCB is 8 bytes on ARM32.
+// ---------------------------------------------------------------------------
+
+#ifdef __aarch64__
+
+unsigned constexpr TLS_TCB_SIZE = 16;
+
+static void set_tpidr(void *p)
+{
+    asm volatile("msr tpidr_el0, %0" : : "r"(p));
+}
+
+#else
+
+unsigned constexpr TLS_TCB_SIZE = 8;
+
+static void set_tpidr(void *p)
+{
+    asm volatile("mcr p15, 0, %0, c13, c0, 2" : : "r"(p));
+    asm volatile("mcr p15, 0, %0, c13, c0, 3" : : "r"(p));
+}
+
+#endif
+
+// ---------------------------------------------------------------------------
+// alloc_tls_block — allocate and initialise a fresh per-task hardware TLS
+// block.
+//
+// Layout:
+//   [0 .. TLS_TCB_SIZE-1]             TCB (zeroed)
+//   [TLS_TCB_SIZE .. +tdata_size-1]   .tdata image (copied from linker section)
+//   [TLS_TCB_SIZE + tdata_size .. end] .tbss (zeroed)
+//
+// The total size matches the span __tdata_start...__tbss_end so that every
+// tprel offset baked into the binary lands at the correct slot in the block.
+// ---------------------------------------------------------------------------
+
+static void *alloc_tls_block()
+{
+    std::size_t const tdata_size =
+        static_cast<std::size_t>(__tdata_end - __tdata_start);
+    std::size_t const span =
+        static_cast<std::size_t>(__tbss_end - __tdata_start);
+    std::size_t const total = TLS_TCB_SIZE + span;
+
+    u8 *const block = new u8[total]();   // value-initialises (zeroes) entire block
+    if (tdata_size > 0)
+    {
+        std::memcpy(block + TLS_TCB_SIZE, __tdata_start, tdata_size);
+    }
+    return block;
+}
+
+// ---------------------------------------------------------------------------
+// Task-switch handler — sets the thread pointer to the incoming task's TLS
+// block before TaskSwitch() transfers execution.
+//
+// Called by CScheduler::Yield() with the NEW task as argument, while still
+// running in the old task's context.  Because taskswitch.S never touches the
+// thread-pointer register, the value set here survives the switch and is
+// already correct when the new task's first instruction executes.
+// ---------------------------------------------------------------------------
+
+static void tls_switch_handler(CTask *new_task)
+{
+    TaskTLSData const *const tls =
+        static_cast<TaskTLSData const *>(
+            new_task->GetUserData(TASK_USER_DATA_USER));
+    if (tls)
+    {
+        set_tpidr(tls->tls_block);
+    }
+}
 
 // ---------------------------------------------------------------------------
 // CLibCXXTask — CTask subclass that runs a std::thread entry function
@@ -55,6 +161,9 @@ public:
     CLibCXXTask(void *(*func)(void *), void *arg, JoinHandle *handle)
         : CTask(TASK_STACK_SIZE * 4), m_func(func), m_arg(arg), m_handle(handle)
     {
+        TaskTLSData *const tls = new TaskTLSData{};
+        tls->tls_block = alloc_tls_block();
+        SetUserData(tls, TASK_USER_DATA_USER);
     }
 
     ~CLibCXXTask() override
@@ -68,9 +177,9 @@ public:
     {
         m_func(m_arg);
 
-        void **const slots =
-            static_cast<void **>(GetUserData(TASK_USER_DATA_USER));
-        if (slots)
+        TaskTLSData *const tls =
+            static_cast<TaskTLSData *>(GetUserData(TASK_USER_DATA_USER));
+        if (tls)
         {
             int constexpr PTHREAD_DESTRUCTOR_ITERATIONS = 4;
             bool destructors_called = true;
@@ -80,16 +189,17 @@ public:
                 destructors_called = false;
                 for (unsigned k = 0; k < s_next_key; ++k)
                 {
-                    if (slots[k] && s_destructors[k])
+                    if (tls->kv[k] && s_destructors[k])
                     {
-                        void *const val = slots[k];
-                        slots[k] = nullptr;
+                        void *const val = tls->kv[k];
+                        tls->kv[k] = nullptr;
                         s_destructors[k](val);
                         destructors_called = true;
                     }
                 }
             }
-            delete[] slots;
+            delete[] static_cast<u8 *>(tls->tls_block);
+            delete tls;
             SetUserData(nullptr, TASK_USER_DATA_USER);
         }
     }
@@ -107,6 +217,20 @@ private:
 int __libcpp_thread_create(__libcpp_thread_t *__t, void *(*__func)(void *),
                            void *__arg)
 {
+    // First-time initialisation: give the main task its own TLS block and
+    // register the task-switch handler so TPIDR is updated on every switch.
+    static bool s_initialized = false;
+    if (!s_initialized)
+    {
+        s_initialized = true;
+        CTask *const main_task = CScheduler::Get()->GetCurrentTask();
+        TaskTLSData *const tls = new TaskTLSData{};
+        tls->tls_block = alloc_tls_block();
+        main_task->SetUserData(tls, TASK_USER_DATA_USER);
+        set_tpidr(tls->tls_block);
+        CScheduler::Get()->RegisterTaskSwitchHandler(tls_switch_handler);
+    }
+
     JoinHandle *const h = new JoinHandle{nullptr, 0, false, false};
     CLibCXXTask *const task = new CLibCXXTask(__func, __arg, h);
     h->task = task;
@@ -215,11 +339,11 @@ int __libcpp_execute_once(__libcpp_exec_once_flag *__flag,
 }
 
 // ---------------------------------------------------------------------------
-// Thread-local storage
+// Thread-local storage (key-value layer used by libc++ internals)
 //
-// Each task stores a void*[MAX_TLS_KEYS] array in TASK_USER_DATA_USER slot.
-// A global table maps key index → destructor. Keys are assigned with a
-// monotonic counter.
+// Each task stores a TaskTLSData in TASK_USER_DATA_USER; the kv[] array
+// within it maps key index → per-task value pointer.
+// Keys are assigned with a monotonic counter; destructors are in s_destructors.
 // ---------------------------------------------------------------------------
 
 int __libcpp_tls_create(__libcpp_tls_key *__key, void (*__at_exit)(void *))
@@ -232,22 +356,19 @@ int __libcpp_tls_create(__libcpp_tls_key *__key, void (*__at_exit)(void *))
 
 void *__libcpp_tls_get(__libcpp_tls_key __key)
 {
-    void **const slots = static_cast<void **>(
+    TaskTLSData const *const tls = static_cast<TaskTLSData const *>(
         CScheduler::Get()->GetCurrentTask()->GetUserData(TASK_USER_DATA_USER));
-    return slots ? slots[__key] : nullptr;
+    return tls ? tls->kv[__key] : nullptr;
 }
 
 int __libcpp_tls_set(__libcpp_tls_key __key, void *__p)
 {
-    CTask *const task = CScheduler::Get()->GetCurrentTask();
-    void **slots = static_cast<void **>(task->GetUserData(TASK_USER_DATA_USER));
-    if (!slots)
+    TaskTLSData *const tls = static_cast<TaskTLSData *>(
+        CScheduler::Get()->GetCurrentTask()->GetUserData(TASK_USER_DATA_USER));
+    if (tls)
     {
-        // Initialize with nullptrs.
-        slots = new void *[MAX_TLS_KEYS]();
-        task->SetUserData(slots, TASK_USER_DATA_USER);
+        tls->kv[__key] = __p;
     }
-    slots[__key] = __p;
     return 0;
 }
 
@@ -258,6 +379,8 @@ _LIBCPP_END_NAMESPACE_STD
 //
 // Required by the compiler to register destructors for thread_local variables.
 // Uses the TLS mechanism above to store a linked list of destructors per thread.
+// Nodes are prepended so the list is processed LIFO (reverse construction
+// order), as required by the C++ standard.
 // ---------------------------------------------------------------------------
 
 struct CXAThreadAtexitNode
@@ -292,13 +415,16 @@ extern "C" int __cxa_thread_atexit(void (*dtor)(void *), void *obj, void *dso_sy
 {
     std::__libcpp_execute_once(&s_cxa_thread_atexit_flag, cxa_thread_atexit_init);
 
-    CXAThreadAtexitNode *const node = new (std::nothrow) CXAThreadAtexitNode{dtor, obj, dso_symbol, nullptr};
+    CXAThreadAtexitNode *const node =
+        new (std::nothrow) CXAThreadAtexitNode{dtor, obj, dso_symbol, nullptr};
     if (!node)
     {
         return -1;
     }
 
-    CXAThreadAtexitNode *const head = static_cast<CXAThreadAtexitNode *>(std::__libcpp_tls_get(s_cxa_thread_atexit_key));
+    CXAThreadAtexitNode *const head =
+        static_cast<CXAThreadAtexitNode *>(
+            std::__libcpp_tls_get(s_cxa_thread_atexit_key));
     node->next = head;
     std::__libcpp_tls_set(s_cxa_thread_atexit_key, node);
 
