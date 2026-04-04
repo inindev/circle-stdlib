@@ -181,7 +181,7 @@ if [ $KASAN_ENABLED -eq 1 -o $LIBCXX_ENABLED -eq 1 ]
 then
     # Keep in sync with KASAN_SHADOW_MAPPING_OFFSET below!
     # See Circle's doc/kasan.txt for details.
-    KERNEL_MAX_SIZE="0x400000"
+    KERNEL_MAX_SIZE="0x600000"
     CIRCLE_DEFINES="$CIRCLE_DEFINES -DKERNEL_MAX_SIZE=${KERNEL_MAX_SIZE}"
 fi
 
@@ -208,9 +208,9 @@ fi
 
     if [ $KASAN_ENABLED -eq 1 ]
     then
-        # Must be kept in sync with KERNEL_MAX_SIZE above!
         # See Circle's doc/kasan.txt for details.
-        echo "KASAN_SHADOW_MAPPING_OFFSET = 0xA00000"
+        KASAN_SHADOW_MAPPING_OFFSET=$(printf "0x%X" $(( KERNEL_MAX_SIZE + 0x700000 )))
+        echo "KASAN_SHADOW_MAPPING_OFFSET = $KASAN_SHADOW_MAPPING_OFFSET"
     fi
     if [ $LIBCXX_ENABLED -eq 1 ]
     then
