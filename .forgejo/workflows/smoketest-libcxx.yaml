@@ -12,6 +12,16 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
+        kasan:
+          - {
+              name: "Without Address Sanitizer",
+              kasan_opt: ""
+            }
+          - {
+              name: "With Address Sanitizer",
+              kasan_opt: "--kasan"
+            }
+
         config:
           - {
               name: "host-x64-target-arm",
@@ -58,7 +68,9 @@ jobs:
               qemu-img: "kernel8.img",
             }
 
-    name: ${{ matrix.config.name }} - With libc++
+    name: ${{ matrix.config.name }} - With libc++ - ${{ matrix.kasan.name }}
+
+    if: ${{ matrix.kasan.kasan_opt == '' || matrix.config['runs-on'] == 'ubuntu-arm-22.04' }}
 
     runs-on: ${{ matrix.config.runs-on }}
 
@@ -80,7 +92,7 @@ jobs:
 
       - name: Configure circle-stdlib with QEMU support and libc++
         run: |
-          ./configure -p ${{ matrix.config.prefix }} -r ${{ matrix.config.circle-machine }} --qemu --libcxx
+          ./configure -p ${{ matrix.config.prefix }} -r ${{ matrix.config.circle-machine }} --qemu --libcxx ${{ matrix.kasan.kasan_opt }}
 
       - name: Build libraries
         run: make -j$(nproc)
