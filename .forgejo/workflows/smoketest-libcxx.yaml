@@ -99,7 +99,7 @@ jobs:
           ulimit -t 300
           ${{ matrix.config.qemu-bin }} -M ${{ matrix.config.qemu-machine }} ${{ matrix.config.qemu-kernel-opt }} ${{ matrix.config.qemu-img }} -display none -nographic -semihosting -sd sdcard.img
 
-      - name: Run basic thread test
+      - name: Run libc++ concurrency test
         run: |
-          cd tests/06-basic-thread
+          cd tests/05-libcxx-concurrency
           ./run_test.sh
