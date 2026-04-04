@@ -242,15 +242,20 @@ TEST_CASE("thread_local test")
     REQUIRE(destructor_count.load() == 3);
     MESSAGE("thread_local destructors executed correctly");
 
-    // Additional test to demonstrate thread_local value retention across multiple calls
-    thread_local int call_counter = 0;
-    
     auto incrementing_thread_func = [](int thread_id) {
         thread_local int counter = 0;
         counter++;
         
         MESSAGE("Thread " << thread_id << " call " << counter << " counter value: " << counter);
         REQUIRE(counter > 0);
+
+        auto const save_counter = counter;
+
+        // Allow other threads to run and potentially call this function again to check if
+        // the counter retains its value across calls within the same thread.
+        std::this_thread::yield();
+
+        REQUIRE(counter == save_counter);
         
         return counter;
     };
