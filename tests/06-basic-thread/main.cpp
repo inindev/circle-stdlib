@@ -241,4 +241,42 @@ TEST_CASE("thread_local test")
     
     REQUIRE(destructor_count.load() == 3);
     MESSAGE("thread_local destructors executed correctly");
+
+    // Additional test to demonstrate thread_local value retention across multiple calls
+    thread_local int call_counter = 0;
+    
+    auto incrementing_thread_func = [](int thread_id) {
+        thread_local int counter = 0;
+        counter++;
+        
+        MESSAGE("Thread " << thread_id << " call " << counter << " counter value: " << counter);
+        REQUIRE(counter > 0);
+        
+        return counter;
+    };
+
+    MESSAGE("Testing thread_local value retention across multiple calls");
+    std::thread t4([&]() {
+        int result1 = incrementing_thread_func(4);
+        int result2 = incrementing_thread_func(4);
+        int result3 = incrementing_thread_func(4);
+        
+        REQUIRE(result1 == 1);
+        REQUIRE(result2 == 2);
+        REQUIRE(result3 == 3);
+        MESSAGE("Thread 4: counter values " << result1 << ", " << result2 << ", " << result3);
+    });
+    
+    std::thread t5([&]() {
+        int result1 = incrementing_thread_func(5);
+        int result2 = incrementing_thread_func(5);
+        
+        REQUIRE(result1 == 1);
+        REQUIRE(result2 == 2);
+        MESSAGE("Thread 5: counter values " << result1 << ", " << result2);
+    });
+    
+    t4.join();
+    t5.join();
+    MESSAGE("thread_local value retention test completed");
 }
