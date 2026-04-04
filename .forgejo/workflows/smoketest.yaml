@@ -69,12 +69,16 @@ jobs:
               qemu-kernel-opt: "-kernel",
               qemu-img: "kernel8.img",
             }
-  
-    name: ${{ matrix.config.name }} - ${{ matrix.kasan.name }}
 
-    # Run KASan tests only on the AArch64 hosts. This saves a lot of time, and KASan 
-    # is not expected to have different results on x64 hosts since it's a userspace-only sanitizer.
-    if: matrix.kasan.kasan_opt == '' || matrix.config['runs-on'] == 'ubuntu-arm-22.04'
+        # Run KASan tests only on the AArch64 hosts. This saves a lot of time, and KASan
+        # is not expected to have different results on x64 hosts since it's a userspace-only sanitizer.
+        exclude:
+          - kasan: { kasan_opt: "--kasan" }
+            config: { name: "host-x64-target-arm" }
+          - kasan: { kasan_opt: "--kasan" }
+            config: { name: "host-x64-target-aarch64" }
+
+    name: ${{ matrix.config.name }} - ${{ matrix.kasan.name }}
 
     runs-on: ${{ matrix.config.runs-on }}
 
