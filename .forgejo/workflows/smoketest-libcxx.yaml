@@ -70,7 +70,9 @@ jobs:
 
     name: ${{ matrix.config.name }} - With libc++ - ${{ matrix.kasan.name }}
 
-    if: ${{ matrix.kasan.kasan_opt == '' || matrix.config['runs-on'] == 'ubuntu-arm-22.04' }}
+    # Run KASan tests only on the AArch64 hosts. This saves a lot of time, and KASan
+    # is not expected to have different results on x64 hosts since it's a userspace-only sanitizer.
+    if: matrix.kasan.kasan_opt == '' || matrix.config['runs-on'] == 'ubuntu-arm-22.04'
 
     runs-on: ${{ matrix.config.runs-on }}
 
