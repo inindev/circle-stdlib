@@ -118,3 +118,8 @@ jobs:
         run: |
           cd tests/05-libcxx-concurrency
           ./run_test.sh
+
+      - name: Run std::filesystem test
+        run: |
+          cd tests/06-filesystem
+          ./run_test.sh
