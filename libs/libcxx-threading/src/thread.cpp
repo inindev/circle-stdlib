@@ -23,7 +23,7 @@ static void (*s_destructors[MAX_TLS_KEYS])(void *) = {};
 static unsigned s_next_key = 0;
 
 // ---------------------------------------------------------------------------
-// Per-task TLS state — stored in TASK_USER_DATA_USER (slot 2).
+// Per-task TLS state — stored in TASK_USER_DATA_LIBCXX (slot 2).
 //
 // tls_block: heap allocation for the hardware TLS block; TPIDR_EL0/TPIDR is
 //            set to point here on every context switch into this task.
@@ -122,7 +122,7 @@ public:
     {
         TaskTLSData *const tls = new TaskTLSData{};
         tls->tls_block = alloc_tls_block();
-        SetUserData(tls, TASK_USER_DATA_USER);
+        SetUserData(tls, TASK_USER_DATA_LIBCXX);
     }
 
     ~CLibCXXTask() override
@@ -135,7 +135,7 @@ public:
     void Run() override
     {
         TaskTLSData *const tls =
-            static_cast<TaskTLSData *>(GetUserData(TASK_USER_DATA_USER));
+            static_cast<TaskTLSData *>(GetUserData(TASK_USER_DATA_LIBCXX));
         if (tls)
         {
             // Set the hardware thread pointer once; Circle's TaskSwitch
@@ -171,7 +171,7 @@ public:
             }
             delete[] static_cast<u8 *>(tls->tls_block);
             delete tls;
-            SetUserData(nullptr, TASK_USER_DATA_USER);
+            SetUserData(nullptr, TASK_USER_DATA_LIBCXX);
         }
     }
 
@@ -197,7 +197,7 @@ int __libcpp_thread_create(__libcpp_thread_t *__t, void *(*__func)(void *),
         CTask *const main_task = CScheduler::Get()->GetCurrentTask();
         TaskTLSData *const tls = new TaskTLSData{};
         tls->tls_block = alloc_tls_block();
-        main_task->SetUserData(tls, TASK_USER_DATA_USER);
+        main_task->SetUserData(tls, TASK_USER_DATA_LIBCXX);
 #ifdef __aarch64__
         asm volatile("msr tpidr_el0, %0" : : "r"(tls->tls_block));
 #else
@@ -316,7 +316,7 @@ int __libcpp_execute_once(__libcpp_exec_once_flag *__flag,
 // ---------------------------------------------------------------------------
 // Thread-local storage (key-value layer used by libc++ internals)
 //
-// Each task stores a TaskTLSData in TASK_USER_DATA_USER; the kv[] array
+// Each task stores a TaskTLSData in TASK_USER_DATA_LIBCXX; the kv[] array
 // within it maps key index → per-task value pointer.
 // Keys are assigned with a monotonic counter; destructors are in s_destructors.
 // ---------------------------------------------------------------------------
@@ -332,14 +332,14 @@ int __libcpp_tls_create(__libcpp_tls_key *__key, void (*__at_exit)(void *))
 void *__libcpp_tls_get(__libcpp_tls_key __key)
 {
     TaskTLSData const *const tls = static_cast<TaskTLSData const *>(
-        CScheduler::Get()->GetCurrentTask()->GetUserData(TASK_USER_DATA_USER));
+        CScheduler::Get()->GetCurrentTask()->GetUserData(TASK_USER_DATA_LIBCXX));
     return tls ? tls->kv[__key] : nullptr;
 }
 
 int __libcpp_tls_set(__libcpp_tls_key __key, void *__p)
 {
     TaskTLSData *const tls = static_cast<TaskTLSData *>(
-        CScheduler::Get()->GetCurrentTask()->GetUserData(TASK_USER_DATA_USER));
+        CScheduler::Get()->GetCurrentTask()->GetUserData(TASK_USER_DATA_LIBCXX));
     if (tls)
     {
         tls->kv[__key] = __p;
