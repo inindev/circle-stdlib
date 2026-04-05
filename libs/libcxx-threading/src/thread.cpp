@@ -47,34 +47,14 @@ extern "C" char __tbss_start[];
 extern "C" char __tbss_end[];
 
 // ---------------------------------------------------------------------------
-// Hardware thread-pointer access.
-//
-// AArch64 variant-1 TLS: TPIDR_EL0 points to the start of the TLS block;
-// .tdata/.tbss follow a 16-byte Thread Control Block (TCB).
-//
-// ARM32: TPIDRURW (cp15 c13 c0 2) is used for write; read via TPIDRURO
-// (cp15 c13 c0 3). TCB is 8 bytes on ARM32.
+// Thread Control Block size — precedes .tdata/.tbss in the per-task TLS block.
+// AArch64 variant-1 TLS: 16-byte TCB.  ARM32: 8-byte TCB.
 // ---------------------------------------------------------------------------
 
 #ifdef __aarch64__
-
 unsigned constexpr TLS_TCB_SIZE = 16;
-
-static void set_tpidr(void *p)
-{
-    asm volatile("msr tpidr_el0, %0" : : "r"(p));
-}
-
 #else
-
 unsigned constexpr TLS_TCB_SIZE = 8;
-
-static void set_tpidr(void *p)
-{
-    asm volatile("mcr p15, 0, %0, c13, c0, 2" : : "r"(p));
-    asm volatile("mcr p15, 0, %0, c13, c0, 3" : : "r"(p));
-}
-
 #endif
 
 // ---------------------------------------------------------------------------
@@ -104,27 +84,6 @@ static void *alloc_tls_block()
         std::memcpy(block + TLS_TCB_SIZE, __tdata_start, tdata_size);
     }
     return block;
-}
-
-// ---------------------------------------------------------------------------
-// Task-switch handler — sets the thread pointer to the incoming task's TLS
-// block before TaskSwitch() transfers execution.
-//
-// Called by CScheduler::Yield() with the NEW task as argument, while still
-// running in the old task's context.  Because taskswitch.S never touches the
-// thread-pointer register, the value set here survives the switch and is
-// already correct when the new task's first instruction executes.
-// ---------------------------------------------------------------------------
-
-static void tls_switch_handler(CTask *new_task)
-{
-    TaskTLSData const *const tls =
-        static_cast<TaskTLSData const *>(
-            new_task->GetUserData(TASK_USER_DATA_USER));
-    if (tls)
-    {
-        set_tpidr(tls->tls_block);
-    }
 }
 
 // ---------------------------------------------------------------------------
@@ -175,10 +134,22 @@ public:
 
     void Run() override
     {
-        m_func(m_arg);
-
         TaskTLSData *const tls =
             static_cast<TaskTLSData *>(GetUserData(TASK_USER_DATA_USER));
+        if (tls)
+        {
+            // Set the hardware thread pointer once; Circle's TaskSwitch
+            // saves/restores TPIDR on every subsequent context switch.
+#ifdef __aarch64__
+            asm volatile("msr tpidr_el0, %0" : : "r"(tls->tls_block));
+#else
+            asm volatile("mcr p15, 0, %0, c13, c0, 2" : : "r"(tls->tls_block));
+            asm volatile("mcr p15, 0, %0, c13, c0, 3" : : "r"(tls->tls_block));
+#endif
+        }
+
+        m_func(m_arg);
+
         if (tls)
         {
             int constexpr PTHREAD_DESTRUCTOR_ITERATIONS = 4;
@@ -218,7 +189,7 @@ int __libcpp_thread_create(__libcpp_thread_t *__t, void *(*__func)(void *),
                            void *__arg)
 {
     // First-time initialisation: give the main task its own TLS block and
-    // register the task-switch handler so TPIDR is updated on every switch.
+    // set the hardware thread pointer; Circle's TaskSwitch will save/restore it.
     static bool s_initialized = false;
     if (!s_initialized)
     {
@@ -227,8 +198,12 @@ int __libcpp_thread_create(__libcpp_thread_t *__t, void *(*__func)(void *),
         TaskTLSData *const tls = new TaskTLSData{};
         tls->tls_block = alloc_tls_block();
         main_task->SetUserData(tls, TASK_USER_DATA_USER);
-        set_tpidr(tls->tls_block);
-        CScheduler::Get()->RegisterTaskSwitchHandler(tls_switch_handler);
+#ifdef __aarch64__
+        asm volatile("msr tpidr_el0, %0" : : "r"(tls->tls_block));
+#else
+        asm volatile("mcr p15, 0, %0, c13, c0, 2" : : "r"(tls->tls_block));
+        asm volatile("mcr p15, 0, %0, c13, c0, 3" : : "r"(tls->tls_block));
+#endif
     }
 
     JoinHandle *const h = new JoinHandle{nullptr, 0, false, false};
