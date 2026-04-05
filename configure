@@ -71,7 +71,7 @@ while true ; do
 	--script-debug) set -x ; shift;;
 	--softfp) FLOAT_ABI=softfp ; shift;;
 	-s|--stddefpath) STDDEF_INCPATH="$2" ; shift 2;;
-	--libcxx) LIBCXX_ENABLED=1 ; shift;;
+	--libcxx) LIBCXX_ENABLED=1 ; STDLIB_SUPPORT=4 ; shift;;
 	--) shift ; break ;;
 	*) echo "Internal error!" ; exit 1;;
     esac
