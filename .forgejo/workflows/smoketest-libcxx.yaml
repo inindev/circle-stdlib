@@ -4,8 +4,9 @@ on:
   workflow_dispatch:
   push:
     branches:
+      - master
+      - develop
       - 'libc\+\+-build'
-      - 'libc\+\+-build-threads'
 
 jobs:
   test-libcxx:
@@ -13,14 +14,8 @@ jobs:
       fail-fast: true
       matrix:
         kasan:
-          - {
-              name: "Without Address Sanitizer",
-              kasan_opt: ""
-            }
-          - {
-              name: "With Address Sanitizer",
-              kasan_opt: "--kasan"
-            }
+          - { name: "Without Address Sanitizer", kasan_opt: "" }
+          - { name: "With Address Sanitizer", kasan_opt: "--kasan" }
 
         config:
           - {
@@ -71,7 +66,7 @@ jobs:
     name: ${{ matrix.config.name }} - With libc++ - ${{ matrix.kasan.name }}
 
     # TODO The syntax doesn't work for unknown reasons.
-    # Run KASan tests only on the AArch64 hosts. This saves a lot of time, and KASan 
+    # Run KASan tests only on the AArch64 hosts. This saves a lot of time, and KASan
     # is not expected to have different results on x64 hosts since it's a userspace-only sanitizer.
     # if: matrix.kasan.kasan_opt == '' || matrix.config['runs-on'] == 'ubuntu-arm-22.04'
 
@@ -103,16 +98,36 @@ jobs:
       - name: Build samples
         run: make build-samples
 
-      - name: Build test library
-        run: |
-          make -C tests/lib
-
       - name: Run smoke test with QEMU
         run: |
           cd samples/05-smoketest
           ../../testdata/setup-sd.sh
           ulimit -t 300
           ${{ matrix.config.qemu-bin }} -M ${{ matrix.config.qemu-machine }} ${{ matrix.config.qemu-kernel-opt }} ${{ matrix.config.qemu-img }} -display none -nographic -semihosting -sd sdcard.img
+
+      - name: Build test library
+        run: |
+          make -C tests/lib
+
+      - name: Run basic socket test
+        run: |
+          cd tests/01-basic-socket
+          ./run_test.sh
+
+      - name: Run basic select/poll socket test
+        run: |
+          cd tests/02-basic-socket-mux
+          ./run_test.sh
+
+      - name: Run pipe test
+        run: |
+          cd tests/03-pipe
+          ./run_test.sh
+
+      - name: Run netdb test
+        run: |
+          cd tests/04-netdb
+          ./run_test.sh
 
       - name: Run libc++ concurrency test
         run: |
