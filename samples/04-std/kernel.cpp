@@ -24,6 +24,7 @@
 #include <exception>
 #include <memory>
 #include <cassert>
+#include <string_view>
 
 namespace
 {
@@ -142,5 +143,8 @@ namespace
 
 		std::wstring const ws = L"Hello, world with wchar_t!";
 		std::wcout << ws.c_str() << std::endl;
+
+		std::string_view const s{ "Hello, world with std::string_view!" };
+		std::cout << s << std::endl;
 	}
 }
