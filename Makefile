@@ -37,7 +37,7 @@ newlib:
 # The current solution is to use the newest commit of llvm-project, which is
 # newer than the latest release, and does not cause build errors.
 # TODO Switch to an official release once the build errors are fixed in the release version.
-libcxx_flags = $(ARCHCPU) --sysroot=$(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH) -isystem $(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH)/include -isystem $(CIRCLEHOME)/addon -isystem $(PWD)/include -isystem $(PWD)/libs/libcxx-threading/include -D_GNU_SOURCE -D__circle__ -D_POSIX_C_SOURCE=200809L -D_POSIX_TIMERS=1 -D_POSIX_MONOTONIC_CLOCK=200112L -U__FRACT_FBIT__
+libcxx_flags = $(ARCHCPU) --sysroot=$(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH) -isystem $(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH)/include -isystem $(CIRCLEHOME)/addon -isystem $(CURDIR)/include -isystem $(CURDIR)/libs/libcxx-threading/include -D_GNU_SOURCE -D__circle__ -D_POSIX_C_SOURCE=200809L -D_POSIX_TIMERS=1 -D_POSIX_MONOTONIC_CLOCK=200112L -U__FRACT_FBIT__
 
 libcxx: $(LIBCXX_INSTALL_DIR)/lib/libc++.a
 
@@ -51,7 +51,7 @@ $(LIBCXX_INSTALL_DIR)/lib/libc++.a:
 		-C cmake/caches/circle-newlib-$(NEWLIB_ARCH).cmake \
 		-G Ninja \
 		-DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
-		-DCMAKE_TOOLCHAIN_FILE="$(PWD)/cmake/toolchains/toolchain-$(NEWLIB_ARCH).cmake" \
+		-DCMAKE_TOOLCHAIN_FILE="$(CURDIR)/cmake/toolchains/toolchain-$(NEWLIB_ARCH).cmake" \
 		-DCIRCLE_ARCHCPU="$(ARCHCPU)" \
 		-DRUNTIMES_USE_LIBC=newlib \
 		-DCMAKE_BUILD_TYPE=Debug \
@@ -80,7 +80,7 @@ libcxx-threading: $(LIBCXX_INSTALL_DIR)/lib/libc++.a
 		-DNEWLIB_INCLUDE_DIR=$(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH)/include \
 		-DCMAKE_INSTALL_PREFIX=$(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH)-libc++-threading \
 		-DCIRCLE_ARCHCPU="$(ARCHCPU)" \
-		-DCMAKE_TOOLCHAIN_FILE=$(PWD)/cmake/toolchains/toolchain-$(NEWLIB_ARCH).cmake
+		-DCMAKE_TOOLCHAIN_FILE=$(CURDIR)/cmake/toolchains/toolchain-$(NEWLIB_ARCH).cmake
 	@echo "Building libcxx-threading..."
 	cmake --build build/libcxx-threading
 	@echo "Installing libcxx-threading..."
