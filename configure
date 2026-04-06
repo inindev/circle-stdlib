@@ -212,10 +212,6 @@ fi
         KASAN_SHADOW_MAPPING_OFFSET=$(printf "0x%X" $(( KERNEL_MAX_SIZE + 0x700000 )))
         echo "KASAN_SHADOW_MAPPING_OFFSET = $KASAN_SHADOW_MAPPING_OFFSET"
     fi
-    if [ $LIBCXX_ENABLED -eq 1 ]
-    then
-        echo "LIBCXX_ENABLED = 1"
-    fi
 ) > libs/circle/Config.mk
 
 # Retrieve the resulting compiler flags from Circle's top-level Makefile rules
