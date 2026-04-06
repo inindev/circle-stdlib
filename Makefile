@@ -54,7 +54,7 @@ $(LIBCXX_INSTALL_DIR)/lib/libc++.a:
 		-DCMAKE_TOOLCHAIN_FILE="$(CURDIR)/cmake/toolchains/toolchain-$(NEWLIB_ARCH).cmake" \
 		-DCIRCLE_ARCHCPU="$(ARCHCPU)" \
 		-DRUNTIMES_USE_LIBC=newlib \
-		-DCMAKE_BUILD_TYPE=Debug \
+		-DCMAKE_BUILD_TYPE="$(LIBCXX_BUILDMODE)" \
 		-DCMAKE_C_FLAGS="$(libcxx_flags)" \
 		-DCMAKE_CXX_FLAGS="$(libcxx_flags)" \
 		-DLIBCXX_CXX_ABI=libcxxabi \
@@ -75,6 +75,7 @@ libcxx-threading: $(LIBCXX_INSTALL_DIR)/lib/libc++.a
 		-S libs/libcxx-threading \
 		-B build/libcxx-threading \
 		-G Ninja \
+		-DCMAKE_BUILD_TYPE="$(LIBCXX_BUILDMODE)" \
 		-DCIRCLE_INCLUDE_DIR=$(CIRCLEHOME)/include \
 		-DLIBCXX_INCLUDE_DIR=$(LIBCXX_INSTALL_DIR)/include/c++/v1 \
 		-DNEWLIB_INCLUDE_DIR=$(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH)/include \
