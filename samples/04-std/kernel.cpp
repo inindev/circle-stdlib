@@ -139,5 +139,8 @@ namespace
 		}
 
 		ofs.close();
+
+		std::wstring const ws = L"Hello, world with wchar_t!";
+		std::wcout << ws.c_str() << std::endl;
 	}
 }
