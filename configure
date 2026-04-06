@@ -176,14 +176,17 @@ then
     fi
 fi
 
-KERNEL_MAX_SIZE="unused"
+# The default KERNEL_MAX_SIZE in Circle is 2 MB, which is already
+# not enough for basic program built in Debug mode. Increase it to
+# 4 MB, and to 6 MB if KASAN or libc++ is enabled.
+KERNEL_MAX_SIZE="0x400000"
 if [ $KASAN_ENABLED -eq 1 -o $LIBCXX_ENABLED -eq 1 ]
 then
-    # Keep in sync with KASAN_SHADOW_MAPPING_OFFSET below!
+    # Kept in sync with KASAN_SHADOW_MAPPING_OFFSET below.
     # See Circle's doc/kasan.txt for details.
     KERNEL_MAX_SIZE="0x600000"
-    CIRCLE_DEFINES="$CIRCLE_DEFINES -DKERNEL_MAX_SIZE=${KERNEL_MAX_SIZE}"
 fi
+CIRCLE_DEFINES="$CIRCLE_DEFINES -DKERNEL_MAX_SIZE=${KERNEL_MAX_SIZE}"
 
 # Create Circle's Config.mk file
 (
