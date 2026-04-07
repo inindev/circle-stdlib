@@ -4,8 +4,8 @@ project(FetchLLVM NONE)
 include(FetchContent)
 FetchContent_Declare(
     llvm_project
-    URL                      https://github.com/llvm/llvm-project/archive/ec6574e90e7c75f5e56d868bde85aaeffbb08266.tar.gz
-    URL_HASH                 SHA256=3f70284f6d2caf193b654193d7a7e68ed9b52956dba79cd6b6a535180263986f
+    URL                      https://github.com/llvm/llvm-project/archive/e9846648fd6183ee6d8cbdb4502213fcf902a211.tar.gz
+    URL_HASH                 SHA256=cd48e6bc03e298fa625e6952ba044e0ae17c53464ed6ac62e934bf37b2dd2f34
     DOWNLOAD_EXTRACT_TIMESTAMP FALSE
     SOURCE_DIR               "${CMAKE_CURRENT_SOURCE_DIR}/../../libs/llvm-project"
 )
