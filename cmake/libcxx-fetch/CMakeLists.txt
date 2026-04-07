@@ -13,4 +13,12 @@ FetchContent_Declare(
 FetchContent_GetProperties(llvm_project)
 if(NOT llvm_project_POPULATED)
     FetchContent_Populate(llvm_project)
+    execute_process(
+        COMMAND patch -p1 -i "${CMAKE_CURRENT_SOURCE_DIR}/../patches/libcxx-random-backend-guard.patch"
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../../libs/llvm-project"
+        RESULT_VARIABLE patch_result
+    )
+    if(NOT patch_result EQUAL 0)
+        message(FATAL_ERROR "Failed to apply libcxx patch (exit code: ${patch_result})")
+    endif()
 endif()

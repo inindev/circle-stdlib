@@ -25,6 +25,7 @@
 #include <memory>
 #include <cassert>
 #include <string_view>
+#include <random>
 
 namespace
 {
@@ -146,5 +147,16 @@ namespace
 
 		std::string_view const s{ "Hello, world with std::string_view!" };
 		std::cout << s << std::endl;
+
+		std::random_device rd;
+		std::uniform_int_distribution<int> dist(0, 9);
+
+		// Generate and print 10 random numbers in the range [0, 9].
+		std::cout << "Random numbers:";
+		for (int i = 0; i < 10; ++i)
+		{
+			std::cout << " " << dist(rd);
+		}
+		std::cout << std::endl;
 	}
 }
