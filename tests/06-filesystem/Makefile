@@ -2,6 +2,6 @@ TOPDIR = ../..
 
 include $(TOPDIR)/tests/lib/Makefile.test.inc
 
-CPPFLAGS += -std=c++20
+CPPFLAGS += -std=c++23
 
 -include $(DEPS)
