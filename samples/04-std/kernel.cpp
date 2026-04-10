@@ -26,6 +26,8 @@
 #include <string>
 #include <string_view>
 #include <vector>
+#include <climits>
+#include <limits>
 
 namespace
 {
@@ -155,5 +157,13 @@ void cxx_test(void)
         std::cout << " " << dist(rd);
     }
     std::cout << std::endl;
+
+    std::cout << "Limits:" << std::endl;
+    std::cout << "  long long: " << std::numeric_limits<long long>::min()
+              << " to " << std::numeric_limits<long long>::max() << std::endl;
+    
+    std::cout << "Limit macros:" << std::endl;
+    std::cout << "  LLONG_MIN: " << LLONG_MIN << std::endl;
+    std::cout << "  LLONG_MAX: " << LLONG_MAX << std::endl;
 }
 } // namespace
