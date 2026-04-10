@@ -42,8 +42,10 @@ libcxx_flags = $(ARCHCPU) --sysroot=$(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH) -isyste
 libcxx: $(LIBCXX_INSTALL_DIR)/lib/libc++.a
 
 $(LIBCXX_INSTALL_DIR)/lib/libc++.a:
+ifndef LIBCXX_REPO
 	@echo "Fetching llvm-project via FetchContent..."
 	cmake -S cmake/libcxx-fetch -B build/libcxx-fetch
+endif
 	@echo "Configuring libc++..."
 	cmake \
 		-S libs/llvm-project/runtimes \

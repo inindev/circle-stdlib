@@ -22,14 +22,16 @@ function usage() {
     echo "  -s <path>, --stddefpath <path>"
     echo "                                 path where stddef.h header is located (only necessary"
     echo "                                 if script cannot determine it automatically)"
-    echo "  --libcxx                       build with LLVM libc++"
+    echo "  --libcxx                       build with LLVM libc++ (fetched automatically)
+  --libcxx-repo                  build with LLVM libc++ using a manually checked-out
+                                 llvm-project repository at libs/llvm-project"
 }
 
 # From the bash FAQ: How to use pathnames relative to the script
 cd "${BASH_SOURCE%/*}" || exit 1
 TOPDIR="$PWD"
 
-TEMP=$(getopt -o dhkno:p:r:s: --long debug,help,kasan,no-circle-build,no-cpp,option:,opt-tls,qemu,prefix:,raspberrypi:,script-debug,softfp,stddefpath:,libcxx \
+TEMP=$(getopt -o dhkno:p:r:s: --long debug,help,kasan,no-circle-build,no-cpp,option:,opt-tls,qemu,prefix:,raspberrypi:,script-debug,softfp,stddefpath:,libcxx,libcxx-repo \
      -n 'configure' -- "$@")
 
 if [ $? != 0 ] ; then echo usage; exit 1 ; fi
@@ -57,6 +59,7 @@ NEWLIB_BUILD_DIR="$TOPDIR/build/circle-newlib"
 CIRCLEHOME="$TOPDIR/libs/circle"
 LIBCXX_ENABLED=0
 LIBCXX_BUILDMODE=Release
+LIBCXX_REPO=0
 
 while true ; do
     case "$1" in
@@ -73,6 +76,7 @@ while true ; do
 	--softfp) FLOAT_ABI=softfp ; shift;;
 	-s|--stddefpath) STDDEF_INCPATH="$2" ; shift 2;;
 	--libcxx) LIBCXX_ENABLED=1 ; STDLIB_SUPPORT=4 ; shift;;
+	--libcxx-repo) LIBCXX_ENABLED=1 ; STDLIB_SUPPORT=4 ; LIBCXX_REPO=1 ; shift;;
 	--) shift ; break ;;
 	*) echo "Internal error!" ; exit 1;;
     esac
@@ -91,6 +95,7 @@ echo "NEWLIB_BUILD_DIR=$NEWLIB_BUILD_DIR"
 echo "DEBUG=$DEBUG"
 echo "KASAN_ENABLED=$KASAN_ENABLED"
 echo "LIBCXX_ENABLED=$LIBCXX_ENABLED"
+echo "LIBCXX_REPO=$LIBCXX_REPO"
 
 echo "Remaining arguments:"
 for arg do echo '--> '"\`$arg'" ; done
@@ -162,6 +167,16 @@ then
     if [ ! -f "libs/mbedtls/README.md" ]
     then
         echo "mbedtls sub-module not found" >&2
+        exit 1
+    fi
+fi
+
+if [ $LIBCXX_REPO -eq 1 ]
+then
+    if [ ! -f "libs/llvm-project/runtimes/CMakeLists.txt" ]
+    then
+        echo "llvm-project not found at libs/llvm-project" >&2
+        echo "Please check out the llvm-project repository there first." >&2
         exit 1
     fi
 fi
@@ -336,6 +351,10 @@ echo "CFLAGS_ISYSTEM='$CFLAGS_ISYSTEM'"
         echo 'LIBCXX_INSTALL_DIR = $(CIRCLE_STDLIB_INSTALL_DIR)-libc++'
         echo 'LIBCXX_THREADING_INSTALL_DIR = $(CIRCLE_STDLIB_INSTALL_DIR)-libc++-threading'
         echo "LIBCXX_BUILDMODE = ${LIBCXX_BUILDMODE}"
+        if [ $LIBCXX_REPO -eq 1 ]
+        then
+            echo "LIBCXX_REPO = 1"
+        fi
         echo "LDFLAGS += --eh-frame-hdr"
         echo "DEFINE += -D_GNU_SOURCE -D_POSIX_C_SOURCE=200809L"
         echo 'CIRCLE_STDLIB_LIBS = \'
