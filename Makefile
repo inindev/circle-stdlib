@@ -3,7 +3,7 @@
 include Config.mk
 
 ifdef LIBCXX_INSTALL_DIR
-all: circle newlib $(MBEDTLS) libcxx libcxx-threading
+all: circle newlib $(MBEDTLS) libcxx libcxx-threading libcxx-support
 else
 all: circle newlib $(MBEDTLS)
 endif
@@ -37,7 +37,12 @@ newlib:
 # The current solution is to use the newest commit of llvm-project, which is
 # newer than the latest release, and does not cause build errors.
 # TODO Switch to an official release once the build errors are fixed in the release version.
-libcxx_flags = $(ARCHCPU) -nostdinc --sysroot=$(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH) -isystem $(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH)/include -isystem $(STDDEF_INCPATH) -isystem $(CIRCLEHOME)/addon -isystem $(CURDIR)/include -isystem $(CURDIR)/libs/libcxx-threading/include -D_GNU_SOURCE -D__circle__ -D_POSIX_C_SOURCE=200809L -D_POSIX_TIMERS=1 -D_POSIX_MONOTONIC_CLOCK=200112L -U__FRACT_FBIT__
+libcxx_flags = $(ARCHCPU) -nostdinc --sysroot=$(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH) \
+	-isystem $(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH)/include \
+	-isystem $(STDDEF_INCPATH) -isystem $(CIRCLEHOME)/addon \
+	-isystem $(CURDIR)/include -isystem $(CURDIR)/libs/libcxx-threading/include \
+	-D_GNU_SOURCE -D__circle__ -D_POSIX_C_SOURCE=200809L -D_POSIX_TIMERS=1 \
+	-D_POSIX_MONOTONIC_CLOCK=200112L -U__FRACT_FBIT__
 
 libcxx: $(LIBCXX_INSTALL_DIR)/lib/libc++.a
 
@@ -88,6 +93,25 @@ libcxx-threading: $(LIBCXX_INSTALL_DIR)/lib/libc++.a
 	cmake --build build/libcxx-threading
 	@echo "Installing libcxx-threading..."
 	cmake --install build/libcxx-threading
+
+libcxx-support: $(LIBCXX_INSTALL_DIR)/lib/libc++.a
+	@echo "Configuring libcxx-support..."
+	cmake \
+		-S libs/libcxx-support \
+		-B build/libcxx-support \
+		-G Ninja \
+		-DCMAKE_BUILD_TYPE="$(LIBCXX_BUILDMODE)" \
+		-DCIRCLE_INCLUDE_DIR=$(CIRCLEHOME)/include \
+		-DLIBCXX_INCLUDE_DIR=$(LIBCXX_INSTALL_DIR)/include/c++/v1 \
+		-DNEWLIB_INCLUDE_DIR=$(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH)/include \
+		-DLIBCXX_THREADING_INCLUDE_DIR=$(CURDIR)/libs/libcxx-threading/include \
+		-DCMAKE_INSTALL_PREFIX=$(LIBCXX_INSTALL_DIR) \
+		-DCIRCLE_ARCHCPU="$(ARCHCPU)" \
+		-DCMAKE_TOOLCHAIN_FILE=$(CURDIR)/cmake/toolchains/toolchain-$(NEWLIB_ARCH).cmake
+	@echo "Building libcxx-support..."
+	cmake --build build/libcxx-support
+	@echo "Installing libcxx-support..."
+	cmake --install build/libcxx-support
 
 build-stdlib-samples:
 	$(MAKE) -C samples/01-nosys
@@ -149,9 +173,11 @@ clean: clean-stdlib-samples clean-mbedtls-samples clean-tests
 	-$(MAKE) -C src/circle-mbedtls clean
 	-cmake --build build/libc++ --target clean
 	-cmake --build build/libcxx-threading --target clean
+	-cmake --build build/libcxx-support --target clean
 
 mrproper: clean
 	-rm -f Config.mk
 	-rm -rf build/circle-newlib/*
 	-rm -rf build/libc++ build/libcxx-fetch install/$(NEWLIB_ARCH)-libc++ install/$(NEWLIB_ARCH)-libc++-threading
 	-rm -rf build/libcxx-threading install/$(NEWLIB_ARCH)-libc++ install/$(NEWLIB_ARCH)-libc++-threading
+	-rm -rf build/libcxx-support

@@ -358,6 +358,7 @@ echo "CFLAGS_ISYSTEM='$CFLAGS_ISYSTEM'"
         echo "LDFLAGS += --eh-frame-hdr"
         echo "DEFINE += -D_GNU_SOURCE -D_POSIX_C_SOURCE=200809L"
         echo 'CIRCLE_STDLIB_LIBS = \'
+        echo '    $(LIBCXX_INSTALL_DIR)/lib/liblibcxx-support.a \'
         echo '    $(LIBCXX_INSTALL_DIR)/lib/libc++.a \'
         echo '    $(LIBCXX_INSTALL_DIR)/lib/libc++abi.a \'
         echo '    $(LIBCXX_INSTALL_DIR)/lib/libunwind.a \'
