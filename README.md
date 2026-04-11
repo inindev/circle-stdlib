@@ -96,11 +96,8 @@ The `configure` script has the following options:
 ```bash
 $ ./configure -h
 usage: configure [ <option> ... ]
-Configure Circle with newlib standard C library and mbed TLS library.
-
-Options:
- Configure Circle with newlib standard C library
-Optional: libc++ standard C++ library and mbed TLS library
+Configure Circle with newlib standard C library
+Optional: libc++ C++ standard library and mbed TLS library
 
 Options:
   -d, --debug                    build with debug information, without optimizer
