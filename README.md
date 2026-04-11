@@ -31,12 +31,35 @@ git remote set-url origin https://codeberg.org/larchcone/circle-newlib.git
 
 ## Overview
 
-The goal of this project is to provide C and C++ standard library support for the
+This project provides C and C++ standard library support for the
 Raspberry Pi bare-metal environment [Circle](https://github.com/rsta2/circle).
 
 [Newlib](https://sourceware.org/newlib/) is used as the standard C library. The fork
 [circle-newlib](https://codeberg.org/larchcone/circle-newlib) contains the changes for
 building Newlib in combination with Circle.
+
+Historically C++ standard library support was provided by using
+[libstdc++](https://gcc.gnu.org/onlinedocs/libstdc++/) as-is from the ARM GNU
+toolchain. Things like containers and algorithms just worked because they
+are platform-independent. However all platform-dependent parts of the C++
+standard library did not work with that approach.
+
+Starting with v20 circle-stdlib implements the option to build circle-stdlib
+with [libc++](https://libcxx.llvm.org/) from the [LLVM project](https://llvm.org/).
+The platform-dependent parts of libc++ are built on top of Circle's
+corresponding classes.
+
+With libc++ comes support in the C++ standard library for:
+
+* `std::thread` (with Circle's cooperative and non-preemptive scheduler)
+* `std::mutex`
+* `std::condition_variable`
+* `std::filesystem`
+* `thread_local` storage class
+* `std::random_device` (based on Circle's class for accessing the hardware RNG)
+
+Using libc++ is currently experimental and optional. It may become the default
+in the future.
 
 [mbed TLS](https://tls.mbed.org/) can optionally be used for TLS connections in
 Circle (call configure with `--opt-tls`, see also the
@@ -48,12 +71,12 @@ Circle (call configure with `--opt-tls`, see also the
 
 A toolchain from [Arm GNU Toolchain Downloads](https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads):
 
-* gcc 14.3.Rel1 hosted on Intel Linux or Windows Subsystem for Linux (WSL/WSL2):
-  * [AArch32 bare-metal target (arm-none-eabi)](https://developer.arm.com/-/media/Files/downloads/gnu/14.3.rel1/binrel/arm-gnu-toolchain-14.3.rel1-x86_64-arm-none-eabi.tar.xz)
-  * [AArch64 ELF bare-metal target (aarch64-none-elf)](https://developer.arm.com/-/media/Files/downloads/gnu/14.3.rel1/binrel/arm-gnu-toolchain-14.3.rel1-x86_64-aarch64-none-elf.tar.xz)
-* gcc 14.3.Rel1 hosted on AArch64 Linux:
-  * [AArch32 bare-metal target (arm-none-eabi)](https://developer.arm.com/-/media/Files/downloads/gnu/14.3.rel1/binrel/arm-gnu-toolchain-14.3.rel1-aarch64-arm-none-eabi.tar.xz)
-  * [AArch64 ELF bare-metal target (aarch64-none-elf)](https://developer.arm.com/-/media/Files/downloads/gnu/14.3.rel1/binrel/arm-gnu-toolchain-14.3.rel1-aarch64-aarch64-none-elf.tar.xz)
+* gcc 15.2.Rel1 hosted on Intel Linux or Windows Subsystem for Linux (WSL/WSL2):
+  * [AArch32 bare-metal target (arm-none-eabi)](https://developer.arm.com/-/media/Files/downloads/gnu/15.2.rel1/binrel/arm-gnu-toolchain-15.2.rel1-x86_64-arm-none-eabi.tar.xz)
+  * [AArch64 ELF bare-metal target (aarch64-none-elf)](https://developer.arm.com/-/media/Files/downloads/gnu/15.2.rel1/binrel/arm-gnu-toolchain-15.2.rel1-x86_64-aarch64-none-elf.tar.xz)
+* gcc 15.2.Rel1 hosted on AArch64 Linux:
+  * [AArch32 bare-metal target (arm-none-eabi)](https://developer.arm.com/-/media/Files/downloads/gnu/15.2.rel1/binrel/arm-gnu-toolchain-15.2.rel1-aarch64-arm-none-eabi.tar.xz)
+  * [AArch64 ELF bare-metal target (aarch64-none-elf)](https://developer.arm.com/-/media/Files/downloads/gnu/15.2.rel1/binrel/arm-gnu-toolchain-15.2.rel1-aarch64-aarch64-none-elf.tar.xz)
 
 ### Building the Libraries
 
@@ -76,6 +99,10 @@ usage: configure [ <option> ... ]
 Configure Circle with newlib standard C library and mbed TLS library.
 
 Options:
+ Configure Circle with newlib standard C library
+Optional: libc++ standard C++ library and mbed TLS library
+
+Options:
   -d, --debug                    build with debug information, without optimizer
   -h, --help                     show usage message
   -k, --kasan                    build with Kernel Address Sanitizer support
@@ -90,7 +117,11 @@ Options:
   --softfp                       use float ABI setting "softfp" instead of "hard"
   -s <path>, --stddefpath <path>
                                  path where stddef.h header is located (only necessary
-                                 if script cannot determine it automatically)
+                                 if configure cannot determine it automatically)
+  --libcxx                       build with LLVM libc++ (fetched automatically)
+  --libcxx-repo                  build with LLVM libc++ using a manually checked-out
+                                 llvm-project repository at libs/llvm-project
+
 ```
 
 To clean the project directory, the following commands can be used:
@@ -134,6 +165,7 @@ Version 3 - see the [LICENSE](LICENSE) file for details
 
 * Rene Stange for [Circle](https://github.com/rsta2/circle).
 * The Newlib team for [Newlib](https://sourceware.org/newlib/).
+* The LLVM team for [libc++](https://libcxx.llvm.org/).
 * The mbed TLS team for [mbed TLS](https://tls.mbed.org/).
 * The [Mongoose web server library](https://mongoose.ws/).
 * The [nlohmann/json](https://github.com/nlohmann/json) library.

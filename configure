@@ -4,7 +4,8 @@ set -e
 
 function usage() {
     echo "usage: configure [ <option> ... ]"
-    echo "Configure Circle with newlib standard C library and mbed TLS library."
+    echo "Configure Circle with newlib standard C library"
+    echo "Optional: libc++ standard C++ library and mbed TLS library"
     echo
     echo "Options:"
     echo "  -d, --debug                    build with debug information, without optimizer"
@@ -21,10 +22,10 @@ function usage() {
     echo "  --softfp                       use float ABI setting \"softfp\" instead of \"hard\""
     echo "  -s <path>, --stddefpath <path>"
     echo "                                 path where stddef.h header is located (only necessary"
-    echo "                                 if script cannot determine it automatically)"
-    echo "  --libcxx                       build with LLVM libc++ (fetched automatically)
-  --libcxx-repo                  build with LLVM libc++ using a manually checked-out
-                                 llvm-project repository at libs/llvm-project"
+    echo "                                 if configure cannot determine it automatically)"
+    echo "  --libcxx                       build with LLVM libc++ (fetched automatically)"
+    echo "  --libcxx-repo                  build with LLVM libc++ using a manually checked-out"
+    echo "                                 llvm-project repository at libs/llvm-project"
 }
 
 # From the bash FAQ: How to use pathnames relative to the script
