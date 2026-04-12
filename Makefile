@@ -32,17 +32,13 @@ newlib:
 	$(MAKE) -C $(NEWLIB_BUILD_DIR) install
 
 
-# The attempt to build with libc++ tag llvmorg-22.1.2 caused build errors in charconv.cpp
-# One workaround was to add -U__FRACT_FBIT__, but there were more build errors.
-# The current solution is to use the newest commit of llvm-project, which is
-# newer than the latest release, and does not cause build errors.
-# TODO Switch to an official release once the build errors are fixed in the release version.
-libcxx_flags = $(ARCHCPU) -nostdinc --sysroot=$(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH) \
+LIBCXX_WARNING_FLAGS =  -Wno-alloc-size-larger-than
+LIBCXX_FLAGS = $(ARCHCPU) -nostdinc --sysroot=$(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH) \
 	-isystem $(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH)/include \
 	-isystem $(STDDEF_INCPATH) -isystem $(CIRCLEHOME)/addon \
 	-isystem $(CURDIR)/include -isystem $(CURDIR)/libs/libcxx-threading/include \
 	-D_GNU_SOURCE -D__circle__ -D_POSIX_C_SOURCE=200809L -D_POSIX_TIMERS=1 \
-	-D_POSIX_MONOTONIC_CLOCK=200112L -U__FRACT_FBIT__
+	-D_POSIX_MONOTONIC_CLOCK=200112L -U__FRACT_FBIT__ $(LIBCXX_WARNING_FLAGS)
 
 libcxx: $(LIBCXX_INSTALL_DIR)/lib/libc++.a
 
@@ -62,8 +58,8 @@ endif
 		-DCIRCLE_ARCHCPU="$(ARCHCPU)" \
 		-DRUNTIMES_USE_LIBC=newlib \
 		-DCMAKE_BUILD_TYPE="$(LIBCXX_BUILDMODE)" \
-		-DCMAKE_C_FLAGS="$(libcxx_flags)" \
-		-DCMAKE_CXX_FLAGS="$(libcxx_flags)" \
+		-DCMAKE_C_FLAGS="$(LIBCXX_FLAGS)" \
+		-DCMAKE_CXX_FLAGS="$(LIBCXX_FLAGS)" \
 		-DLIBCXX_CXX_ABI=libcxxabi \
 		-DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
 		-DLIBCXX_ENABLE_WERROR=NO \
@@ -106,10 +102,12 @@ libcxx-support: $(LIBCXX_INSTALL_DIR)/lib/libc++.a
 		-DNEWLIB_INCLUDE_DIR=$(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH)/include \
 		-DLIBCXX_THREADING_INCLUDE_DIR=$(CURDIR)/libs/libcxx-threading/include \
 		-DCMAKE_INSTALL_PREFIX=$(LIBCXX_INSTALL_DIR) \
+		-DCMAKE_C_FLAGS="$(LIBCXX_WARNING_FLAGS)" \
+		-DCMAKE_CXX_FLAGS="$(LIBCXX_WARNING_FLAGS)" \
 		-DCIRCLE_ARCHCPU="$(ARCHCPU)" \
 		-DCMAKE_TOOLCHAIN_FILE=$(CURDIR)/cmake/toolchains/toolchain-$(NEWLIB_ARCH).cmake
 	@echo "Building libcxx-support..."
-	cmake --build build/libcxx-support
+	cmake --build build/libcxx-support --verbose
 	@echo "Installing libcxx-support..."
 	cmake --install build/libcxx-support
 
