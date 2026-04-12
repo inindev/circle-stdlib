@@ -32,13 +32,12 @@ newlib:
 	$(MAKE) -C $(NEWLIB_BUILD_DIR) install
 
 
-LIBCXX_WARNING_FLAGS =  -Wno-alloc-size-larger-than
 LIBCXX_FLAGS = $(ARCHCPU) -nostdinc --sysroot=$(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH) \
 	-isystem $(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH)/include \
 	-isystem $(STDDEF_INCPATH) -isystem $(CIRCLEHOME)/addon \
 	-isystem $(CURDIR)/include -isystem $(CURDIR)/libs/libcxx-threading/include \
 	-D_GNU_SOURCE -D__circle__ -D_POSIX_C_SOURCE=200809L -D_POSIX_TIMERS=1 \
-	-D_POSIX_MONOTONIC_CLOCK=200112L -U__FRACT_FBIT__ $(LIBCXX_WARNING_FLAGS)
+	-D_POSIX_MONOTONIC_CLOCK=200112L -U__FRACT_FBIT__ -Wno-alloc-size-larger-than
 
 libcxx: $(LIBCXX_INSTALL_DIR)/lib/libc++.a
 
@@ -68,7 +67,7 @@ endif
 		-DCMAKE_INSTALL_MESSAGE=NEVER \
 		-DCMAKE_INSTALL_PREFIX="$(LIBCXX_INSTALL_DIR)"
 	@echo "Building libc++..."
-	cmake --build build/libc++ --verbose --target cxx --target cxxabi --target unwind
+	cmake --build build/libc++ --target cxx --target cxxabi --target unwind
 	@echo "Installing libc++..."
 	cmake --build build/libc++ --target install
 
@@ -102,12 +101,10 @@ libcxx-support: $(LIBCXX_INSTALL_DIR)/lib/libc++.a
 		-DNEWLIB_INCLUDE_DIR=$(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH)/include \
 		-DLIBCXX_THREADING_INCLUDE_DIR=$(CURDIR)/libs/libcxx-threading/include \
 		-DCMAKE_INSTALL_PREFIX=$(LIBCXX_INSTALL_DIR) \
-		-DCMAKE_C_FLAGS="$(LIBCXX_WARNING_FLAGS)" \
-		-DCMAKE_CXX_FLAGS="$(LIBCXX_WARNING_FLAGS)" \
 		-DCIRCLE_ARCHCPU="$(ARCHCPU)" \
 		-DCMAKE_TOOLCHAIN_FILE=$(CURDIR)/cmake/toolchains/toolchain-$(NEWLIB_ARCH).cmake
 	@echo "Building libcxx-support..."
-	cmake --build build/libcxx-support --verbose
+	cmake --build build/libcxx-support
 	@echo "Installing libcxx-support..."
 	cmake --install build/libcxx-support
 
