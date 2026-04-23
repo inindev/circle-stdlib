@@ -17,6 +17,8 @@ function usage() {
     echo "  --opt-tls                      build with mbed TLS support"
     echo "  -p <string>, --prefix <string> prefix of the toolchain commands (default: arm-none-eabi-)"
     echo "  --qemu                         build for running under QEMU in semihosting mode"
+    echo "  --kernel-max-size <megabytes>"
+    echo "                                 Set maximum size of the kernel image (default: 4)"
     echo "  -r <number>, --raspberrypi <number>"
     echo "                                 Circle Raspberry Pi model number (1, 2, 3, 4, 5, default: 1)"
     echo "  --softfp                       use float ABI setting \"softfp\" instead of \"hard\""
@@ -32,7 +34,7 @@ function usage() {
 cd "${BASH_SOURCE%/*}" || exit 1
 TOPDIR="$PWD"
 
-TEMP=$(getopt -o dhkno:p:r:s: --long debug,help,kasan,no-circle-build,no-cpp,option:,opt-tls,qemu,prefix:,raspberrypi:,script-debug,softfp,stddefpath:,libcxx,libcxx-repo \
+TEMP=$(getopt -o dhkno:p:r:s: --long debug,help,kasan,no-circle-build,no-cpp,option:,opt-tls,qemu,prefix:,raspberrypi:,script-debug,softfp,stddefpath:,libcxx,libcxx-repo,kernel-max-size: \
      -n 'configure' -- "$@")
 
 if [ $? != 0 ] ; then echo usage; exit 1 ; fi
@@ -61,6 +63,7 @@ CIRCLEHOME="$TOPDIR/libs/circle"
 LIBCXX_ENABLED=0
 LIBCXX_BUILDMODE=Release
 LIBCXX_REPO=0
+KERNEL_MAX_SIZE_MB=4
 
 while true ; do
     case "$1" in
@@ -71,6 +74,7 @@ while true ; do
 	-o|--option) CIRCLE_DEFINES="$CIRCLE_DEFINES -D$2" ; shift 2;;
 	--opt-tls) OPTTLS=1 ; shift;;
 	--qemu) CIRCLE_QEMU=1 ; shift;;
+	--kernel-max-size) KERNEL_MAX_SIZE_MB="$2"; shift 2;;
 	-p|--prefix) TOOLPREFIX="$2" ; shift 2;;
 	-r|--raspberrypi) RASPBERRYPI="$2" ; shift 2;;
 	--script-debug) set -x ; shift;;
@@ -82,6 +86,7 @@ while true ; do
 	*) echo "Internal error!" ; exit 1;;
     esac
 done
+
 
 echo "RASPBERRYPI=$RASPBERRYPI"
 echo "TOOLPREFIX=$TOOLPREFIX"
@@ -193,16 +198,16 @@ then
     fi
 fi
 
-# The default KERNEL_MAX_SIZE in Circle is 2 MB, which is already
-# not enough for basic program built in Debug mode. Increase it to
-# 4 MB, and to 6 MB if KASAN or libc++ is enabled.
-KERNEL_MAX_SIZE="0x400000"
-if [ $KASAN_ENABLED -eq 1 -o $LIBCXX_ENABLED -eq 1 ]
+
+KERNEL_MAX_SIZE=$(printf "0x%X" $(( KERNEL_MAX_SIZE_MB * 0x100000 )))
+
+if [ "${KERNEL_MAX_SIZE_MB}" -lt 8 ] && [ "${LIBCXX_REPO}${LIBCXX_ENABLED}${KASAN_ENABLED}" != "000" ]
 then
-    # Kept in sync with KASAN_SHADOW_MAPPING_OFFSET below.
-    # See Circle's doc/kasan.txt for details.
-    KERNEL_MAX_SIZE="0x600000"
+    echo "Warning: KERNEL_MAX_SIZE is ${KERNEL_MAX_SIZE_MB} MB, but LIBCXX or KASan support is enabled." >&2
+    echo "         Consider using --kernel-max-size 8 or larger." >&2
 fi
+
+KASAN_SHADOW_MAPPING_OFFSET=$(printf "0x%X" $(( KERNEL_MAX_SIZE + 0x700000 )))
 CIRCLE_DEFINES="$CIRCLE_DEFINES -DKERNEL_MAX_SIZE=${KERNEL_MAX_SIZE}"
 
 # Create Circle's Config.mk file
@@ -229,7 +234,6 @@ CIRCLE_DEFINES="$CIRCLE_DEFINES -DKERNEL_MAX_SIZE=${KERNEL_MAX_SIZE}"
     if [ $KASAN_ENABLED -eq 1 ]
     then
         # See Circle's doc/kasan.txt for details.
-        KASAN_SHADOW_MAPPING_OFFSET=$(printf "0x%X" $(( KERNEL_MAX_SIZE + 0x700000 )))
         echo "KASAN_SHADOW_MAPPING_OFFSET = $KASAN_SHADOW_MAPPING_OFFSET"
     fi
 ) > libs/circle/Config.mk

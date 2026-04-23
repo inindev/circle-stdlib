@@ -89,7 +89,7 @@ jobs:
 
       - name: Configure circle-stdlib with QEMU support and libc++
         run: |
-          ./configure -p ${{ matrix.config.prefix }} -r ${{ matrix.config.circle-machine }} --qemu --libcxx ${{ matrix.kasan.kasan_opt }}
+          ./configure -p ${{ matrix.config.prefix }} -r ${{ matrix.config.circle-machine }} --qemu --libcxx ${{ matrix.kasan.kasan_opt }} --kernel-max-size 8
 
       - name: Build libraries
         run: make -j$(nproc)

@@ -109,6 +109,8 @@ Options:
   --opt-tls                      build with mbed TLS support
   -p <string>, --prefix <string> prefix of the toolchain commands (default: arm-none-eabi-)
   --qemu                         build for running under QEMU in semihosting mode
+  --kernel-max-size <megabytes>
+                                 Set maximum size of the kernel image (default: 4)
   -r <number>, --raspberrypi <number>
                                  Circle Raspberry Pi model number (1, 2, 3, 4, 5, default: 1)
   --softfp                       use float ABI setting "softfp" instead of "hard"
@@ -118,6 +120,7 @@ Options:
   --libcxx                       build with LLVM libc++ (fetched automatically)
   --libcxx-repo                  build with LLVM libc++ using a manually checked-out
                                  llvm-project repository at libs/llvm-project
+
 
 ```
 

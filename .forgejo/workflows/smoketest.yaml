@@ -95,7 +95,7 @@ jobs:
 
       - name: Configure circle-stdlib with QEMU support
         run: |
-          ./configure -p ${{ matrix.config.prefix }} -r ${{ matrix.config.circle-machine }} --qemu ${{ matrix.kasan.kasan_opt }}
+          ./configure -p ${{ matrix.config.prefix }} -r ${{ matrix.config.circle-machine }} --qemu ${{ matrix.kasan.kasan_opt }} --
 
       - name: Build libraries
         run: make -j$(nproc)
