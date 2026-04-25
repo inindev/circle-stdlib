@@ -28,13 +28,17 @@ function usage() {
     echo "  --libcxx                       build with LLVM libc++ (fetched automatically)"
     echo "  --libcxx-repo                  build with LLVM libc++ using a manually checked-out"
     echo "                                 llvm-project repository at libs/llvm-project"
+    echo "  --clang                        build with LLVM clang/clang++ instead of GCC"
+    echo "  --clang-suffix <suffix>        version suffix appended to clang tool names"
+    echo "                                 (e.g. -18 selects clang-18, clang++-18, llvm-ar-18, ...)"
+    echo "  --aarch64                      target AArch64 (required with --clang for 64-bit builds)"
 }
 
 # From the bash FAQ: How to use pathnames relative to the script
 cd "${BASH_SOURCE%/*}" || exit 1
 TOPDIR="$PWD"
 
-TEMP=$(getopt -o dhkno:p:r:s: --long debug,help,kasan,no-circle-build,no-cpp,option:,opt-tls,qemu,prefix:,raspberrypi:,script-debug,softfp,stddefpath:,libcxx,libcxx-repo,kernel-max-size: \
+TEMP=$(getopt -o dhkno:p:r:s: --long debug,help,kasan,no-circle-build,no-cpp,option:,opt-tls,qemu,prefix:,raspberrypi:,script-debug,softfp,stddefpath:,libcxx,libcxx-repo,kernel-max-size:,clang,clang-suffix:,aarch64 \
      -n 'configure' -- "$@")
 
 if [ $? != 0 ] ; then echo usage; exit 1 ; fi
@@ -64,6 +68,8 @@ LIBCXX_ENABLED=0
 LIBCXX_BUILDMODE=Release
 LIBCXX_REPO=0
 KERNEL_MAX_SIZE_MB=4
+CLANG=0
+CLANG_SUFFIX=""
 
 while true ; do
     case "$1" in
@@ -82,6 +88,9 @@ while true ; do
 	-s|--stddefpath) STDDEF_INCPATH="$2" ; shift 2;;
 	--libcxx) LIBCXX_ENABLED=1 ; STDLIB_SUPPORT=4 ; shift;;
 	--libcxx-repo) LIBCXX_ENABLED=1 ; STDLIB_SUPPORT=4 ; LIBCXX_REPO=1 ; shift;;
+	--clang) CLANG=1 ; shift;;
+	--clang-suffix) CLANG_SUFFIX="$2" ; shift 2;;
+	--aarch64) SIXTY_FOUR_BIT=1 ; NEWLIB_ARCH="aarch64-none-circle" ; shift;;
 	--) shift ; break ;;
 	*) echo "Internal error!" ; exit 1;;
     esac
@@ -106,8 +115,14 @@ echo "LIBCXX_REPO=$LIBCXX_REPO"
 echo "Remaining arguments:"
 for arg do echo '--> '"\`$arg'" ; done
 
-: ${CC:="$TOOLPREFIX"gcc}
-: ${CXX:="$TOOLPREFIX"g++}
+if [ $CLANG -eq 1 ]
+then
+    : ${CC:="clang${CLANG_SUFFIX}"}
+    : ${CXX:="clang++${CLANG_SUFFIX}"}
+else
+    : ${CC:="${TOOLPREFIX}gcc"}
+    : ${CXX:="${TOOLPREFIX}g++"}
+fi
 
 if [ ! -x "`which $CC 2> /dev/null`" ]
 then
@@ -116,12 +131,23 @@ then
     exit 1
 fi
 
-# Try to determine 64-bit build from Target: output of gcc
-if [ "$($CC -v 2>&1 | grep '^Target:.*64')" != "" ]
+# Try to determine 64-bit build from Target: output of gcc.
+# For clang, the target is determined by --aarch64 / --clang because clang -v
+# without an explicit --target shows the host triple, not the cross target.
+if [ $CLANG -eq 0 ]
 then
-    echo "64-bit compiler detected"
-    SIXTY_FOUR_BIT=1
-    NEWLIB_ARCH="aarch64-none-circle"
+    if [ "$($CC -v 2>&1 | grep '^Target:.*64')" != "" ]
+    then
+        echo "64-bit compiler detected"
+        SIXTY_FOUR_BIT=1
+        NEWLIB_ARCH="aarch64-none-circle"
+    fi
+fi
+
+if [ $CLANG -eq 1 ] && [ "$RASPBERRYPI" -eq 5 ] && [ $SIXTY_FOUR_BIT -eq 0 ]
+then
+    echo "Error: Raspberry Pi 5 requires a 64-bit build. Add --aarch64 when using --clang." >&2
+    exit 1
 fi
 
 if [ "$STDDEF_INCPATH" = "" ]
@@ -236,6 +262,14 @@ CIRCLE_DEFINES="$CIRCLE_DEFINES -DKERNEL_MAX_SIZE=${KERNEL_MAX_SIZE}"
         # See Circle's doc/kasan.txt for details.
         echo "KASAN_SHADOW_MAPPING_OFFSET = $KASAN_SHADOW_MAPPING_OFFSET"
     fi
+    if [ $CLANG -eq 1 ]
+    then
+        echo "CLANG = 1"
+        if [ -n "$CLANG_SUFFIX" ]
+        then
+            echo "SUFFIX = ${CLANG_SUFFIX}"
+        fi
+    fi
 ) > libs/circle/Config.mk
 
 # Retrieve the resulting compiler flags from Circle's top-level Makefile rules
@@ -257,31 +291,59 @@ fi
 KASAN_CFLAGS=""
 if [ $KASAN_ENABLED -eq 1 ]
 then
-    # PREFER_SIZE_OVER_SPEED is needed to prevent newlib from performing
-    # optimized memory access, e.g. access with whole integers,
-    # that are out-of-bounds when strictly checked by the
-    # address sanitizer.
-    KASAN_CFLAGS="-fsanitize=kernel-address -fno-builtin \
-        -fasan-shadow-offset=$KASAN_SHADOW_MAPPING_OFFSET \
-        --param asan-globals=$KASAN_SANITIZE_GLOBALS \
-        --param asan-stack=$KASAN_SANITIZE_STACK \
-        --param asan-instrumentation-with-call-threshold=0 \
-        -fno-omit-frame-pointer\
-        -DPREFER_SIZE_OVER_SPEED"
+    # PREFER_SIZE_OVER_SPEED prevents newlib from performing optimized memory
+    # access (e.g. whole-integer access) that would be flagged out-of-bounds
+    # by the address sanitizer.
+    KASAN_BASE="-fsanitize=kernel-address -fno-builtin -fno-omit-frame-pointer -DPREFER_SIZE_OVER_SPEED"
+    if [ $CLANG -eq 1 ]
+    then
+        KASAN_CFLAGS="${KASAN_BASE} \
+            -mllvm -asan-mapping-offset=$KASAN_SHADOW_MAPPING_OFFSET \
+            -mllvm -asan-instrumentation-with-call-threshold=0 \
+            -mllvm -asan-stack=$KASAN_SANITIZE_STACK \
+            -mllvm -asan-globals=$KASAN_SANITIZE_GLOBALS"
+    else
+        KASAN_CFLAGS="${KASAN_BASE} \
+            -fasan-shadow-offset=$KASAN_SHADOW_MAPPING_OFFSET \
+            --param asan-globals=$KASAN_SANITIZE_GLOBALS \
+            --param asan-stack=$KASAN_SANITIZE_STACK \
+            --param asan-instrumentation-with-call-threshold=0"
+    fi
 fi
 
 
-export \
-    CPPFLAGS_FOR_TARGET="-isystem \"$CIRCLEHOME/include\" -isystem \"$CIRCLEHOME/addon\" -isystem \"$TOPDIR/include\"" \
-    CC_FOR_TARGET=${TOOLPREFIX}gcc \
-    CXX_FOR_TARGET=${TOOLPREFIX}g++ \
-    GCC_FOR_TARGET=${TOOLPREFIX}gcc \
-    AR_FOR_TARGET=${TOOLPREFIX}gcc-ar \
-    AS_FOR_TARGET=${TOOLPREFIX}gcc-as \
-    LD_FOR_TARGET=${TOOLPREFIX}gcc-ld \
-    RANLIB_FOR_TARGET=${TOOLPREFIX}gcc-ranlib \
-    OBJCOPY_FOR_TARGET=${TOOLPREFIX}gcc-objcopy \
-    OBJDUMP_FOR_TARGET=${TOOLPREFIX}gcc-objdump
+if [ $CLANG -eq 1 ]
+then
+    if [ $SIXTY_FOUR_BIT -eq 1 ]
+    then
+        CLANG_TARGET="--target=aarch64-none-elf"
+    else
+        CLANG_TARGET="--target=arm-none-eabi"
+    fi
+    export \
+        CPPFLAGS_FOR_TARGET="-isystem \"$CIRCLEHOME/include\" -isystem \"$CIRCLEHOME/addon\" -isystem \"$TOPDIR/include\"" \
+        CC_FOR_TARGET="clang${CLANG_SUFFIX} ${CLANG_TARGET}" \
+        CXX_FOR_TARGET="clang++${CLANG_SUFFIX} ${CLANG_TARGET}" \
+        GCC_FOR_TARGET="clang${CLANG_SUFFIX} ${CLANG_TARGET}" \
+        AR_FOR_TARGET="llvm-ar${CLANG_SUFFIX}" \
+        AS_FOR_TARGET="clang${CLANG_SUFFIX} ${CLANG_TARGET}" \
+        LD_FOR_TARGET="clang${CLANG_SUFFIX} ${CLANG_TARGET}" \
+        RANLIB_FOR_TARGET="llvm-ranlib${CLANG_SUFFIX}" \
+        OBJCOPY_FOR_TARGET="llvm-objcopy${CLANG_SUFFIX}" \
+        OBJDUMP_FOR_TARGET="llvm-objdump${CLANG_SUFFIX}"
+else
+    export \
+        CPPFLAGS_FOR_TARGET="-isystem \"$CIRCLEHOME/include\" -isystem \"$CIRCLEHOME/addon\" -isystem \"$TOPDIR/include\"" \
+        CC_FOR_TARGET=${TOOLPREFIX}gcc \
+        CXX_FOR_TARGET=${TOOLPREFIX}g++ \
+        GCC_FOR_TARGET=${TOOLPREFIX}gcc \
+        AR_FOR_TARGET=${TOOLPREFIX}gcc-ar \
+        AS_FOR_TARGET=${TOOLPREFIX}gcc-as \
+        LD_FOR_TARGET=${TOOLPREFIX}gcc-ld \
+        RANLIB_FOR_TARGET=${TOOLPREFIX}gcc-ranlib \
+        OBJCOPY_FOR_TARGET=${TOOLPREFIX}gcc-objcopy \
+        OBJDUMP_FOR_TARGET=${TOOLPREFIX}gcc-objdump
+fi
 
 if [ $DEBUG -eq 1 ]
 then
@@ -338,6 +400,11 @@ echo "CFLAGS_ISYSTEM='$CFLAGS_ISYSTEM'"
     echo "OBJCOPY_FOR_TARGET = ${OBJCOPY_FOR_TARGET}"
     echo "OBJDUMP_FOR_TARGET = ${OBJDUMP_FOR_TARGET}"
     echo "NEWLIB_ARCH = ${NEWLIB_ARCH}"
+    echo "CLANG = ${CLANG}"
+    if [ -n "$CLANG_SUFFIX" ]
+    then
+        echo "SUFFIX = ${CLANG_SUFFIX}"
+    fi
     echo "CFLAGS += -nostdinc ${CFLAGS_ISYSTEM}"
     echo "DEFINE += -D_GNU_SOURCE -D_POSIX_C_SOURCE=200809L"
     echo 'CIRCLE_STDLIB_CIRCLE_LIBS = \'

@@ -2,6 +2,17 @@
 
 include Config.mk
 
+ifeq ($(strip $(CLANG)),1)
+TOOLCHAIN_SUFFIX = -clang
+CMAKE_COMPILER_OVERRIDE = \
+	-DCMAKE_C_COMPILER=clang$(SUFFIX) \
+	-DCMAKE_CXX_COMPILER=clang++$(SUFFIX) \
+	-DCMAKE_ASM_COMPILER=clang$(SUFFIX)
+else
+TOOLCHAIN_SUFFIX =
+CMAKE_COMPILER_OVERRIDE =
+endif
+
 ifdef LIBCXX_INSTALL_DIR
 all: circle newlib $(MBEDTLS) libcxx libcxx-threading libcxx-support
 else
@@ -28,7 +39,7 @@ newlib:
 	RANLIB_FOR_TARGET='$(RANLIB_FOR_TARGET)' \
 	OBJCOPY_FOR_TARGET='$(OBJCOPY_FOR_TARGET)' \
 	OBJDUMP_FOR_TARGET='$(OBJDUMP_FOR_TARGET)' \
-	$(MAKE) -C $(NEWLIB_BUILD_DIR) && \
+	$(MAKE) -C $(NEWLIB_BUILD_DIR) V=1 && \
 	$(MAKE) -C $(NEWLIB_BUILD_DIR) install
 
 
@@ -53,7 +64,8 @@ endif
 		-C cmake/caches/circle-newlib-$(NEWLIB_ARCH).cmake \
 		-G Ninja \
 		-DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
-		-DCMAKE_TOOLCHAIN_FILE="$(CURDIR)/cmake/toolchains/toolchain-$(NEWLIB_ARCH).cmake" \
+		-DCMAKE_TOOLCHAIN_FILE="$(CURDIR)/cmake/toolchains/toolchain-$(NEWLIB_ARCH)$(TOOLCHAIN_SUFFIX).cmake" \
+		$(CMAKE_COMPILER_OVERRIDE) \
 		-DCIRCLE_ARCHCPU="$(ARCHCPU)" \
 		-DRUNTIMES_USE_LIBC=newlib \
 		-DCMAKE_BUILD_TYPE="$(LIBCXX_BUILDMODE)" \
@@ -83,7 +95,8 @@ libcxx-threading: $(LIBCXX_INSTALL_DIR)/lib/libc++.a
 		-DNEWLIB_INCLUDE_DIR=$(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH)/include \
 		-DCMAKE_INSTALL_PREFIX=$(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH)-libc++-threading \
 		-DCIRCLE_ARCHCPU="$(ARCHCPU)" \
-		-DCMAKE_TOOLCHAIN_FILE=$(CURDIR)/cmake/toolchains/toolchain-$(NEWLIB_ARCH).cmake
+		$(CMAKE_COMPILER_OVERRIDE) \
+		-DCMAKE_TOOLCHAIN_FILE=$(CURDIR)/cmake/toolchains/toolchain-$(NEWLIB_ARCH)$(TOOLCHAIN_SUFFIX).cmake
 	@echo "Building libcxx-threading..."
 	cmake --build build/libcxx-threading
 	@echo "Installing libcxx-threading..."
@@ -102,7 +115,8 @@ libcxx-support: $(LIBCXX_INSTALL_DIR)/lib/libc++.a
 		-DLIBCXX_THREADING_INCLUDE_DIR=$(CURDIR)/libs/libcxx-threading/include \
 		-DCMAKE_INSTALL_PREFIX=$(LIBCXX_INSTALL_DIR) \
 		-DCIRCLE_ARCHCPU="$(ARCHCPU)" \
-		-DCMAKE_TOOLCHAIN_FILE=$(CURDIR)/cmake/toolchains/toolchain-$(NEWLIB_ARCH).cmake
+		$(CMAKE_COMPILER_OVERRIDE) \
+		-DCMAKE_TOOLCHAIN_FILE=$(CURDIR)/cmake/toolchains/toolchain-$(NEWLIB_ARCH)$(TOOLCHAIN_SUFFIX).cmake
 	@echo "Building libcxx-support..."
 	cmake --build build/libcxx-support
 	@echo "Installing libcxx-support..."
