@@ -7,26 +7,32 @@ TOOLCHAIN_SUFFIX = -clang
 CMAKE_COMPILER_OVERRIDE = \
 	-DCMAKE_C_COMPILER=clang$(SUFFIX) \
 	-DCMAKE_CXX_COMPILER=clang++$(SUFFIX) \
-	-DCMAKE_ASM_COMPILER=clang$(SUFFIX)
+	-DCMAKE_ASM_COMPILER=clang$(SUFFIX) \
+	-DCMAKE_AR=llvm-ar$(SUFFIX) \
+	-DCMAKE_RANLIB=llvm-ranlib$(SUFFIX)
+# Headers from the installed circle-newlib take priority over the sysroot when
+# building Circle components.  The variable is empty for GCC builds so passing
+# it unconditionally is safe.
+CIRCLE_NEWLIB_HEADERS = -isystem $(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH)/include
 else
 TOOLCHAIN_SUFFIX =
 CMAKE_COMPILER_OVERRIDE =
 endif
 
 ifdef LIBCXX_INSTALL_DIR
-all: circle newlib $(MBEDTLS) libcxx libcxx-threading libcxx-support
+all: newlib circle $(MBEDTLS) libcxx libcxx-threading libcxx-support
 else
-all: circle newlib $(MBEDTLS)
+all: newlib circle $(MBEDTLS)
 endif
 
 build-samples: build-stdlib-samples $(MBEDTLS_SAMPLES)
 
 circle:
-	+cd libs/circle && ./makeall --nosample
-	$(MAKE) -C libs/circle/addon/SDCard
-	$(MAKE) -C libs/circle/addon/fatfs
-	$(MAKE) -C libs/circle/addon/qemu
-	+cd libs/circle/addon/wlan && ./makeall --nosample
+	+cd libs/circle && EXTRAINCLUDE="$(CIRCLE_NEWLIB_HEADERS)" ./makeall --nosample
+	$(MAKE) -C libs/circle/addon/SDCard EXTRAINCLUDE="$(CIRCLE_NEWLIB_HEADERS)"
+	$(MAKE) -C libs/circle/addon/fatfs EXTRAINCLUDE="$(CIRCLE_NEWLIB_HEADERS)"
+	$(MAKE) -C libs/circle/addon/qemu EXTRAINCLUDE="$(CIRCLE_NEWLIB_HEADERS)"
+	+cd libs/circle/addon/wlan && EXTRAINCLUDE="$(CIRCLE_NEWLIB_HEADERS)" ./makeall --nosample
 
 newlib:
 	CPPFLAGS_FOR_TARGET='$(CPPFLAGS_FOR_TARGET)' \
@@ -39,7 +45,7 @@ newlib:
 	RANLIB_FOR_TARGET='$(RANLIB_FOR_TARGET)' \
 	OBJCOPY_FOR_TARGET='$(OBJCOPY_FOR_TARGET)' \
 	OBJDUMP_FOR_TARGET='$(OBJDUMP_FOR_TARGET)' \
-	$(MAKE) -C $(NEWLIB_BUILD_DIR) V=1 && \
+	$(MAKE) -C $(NEWLIB_BUILD_DIR) && \
 	$(MAKE) -C $(NEWLIB_BUILD_DIR) install
 
 
