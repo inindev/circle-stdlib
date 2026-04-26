@@ -3,10 +3,9 @@ FROM data.forgejo.org/oci/node:20-bookworm
 RUN apt-get update && \
     apt-get install -y \
         build-essential wget ninja-build libglib2.0-dev libslirp-dev \
-        python3 python3-pip python3-venv git texinfo netcat-traditional \
+        python3 python3-pip python3-venv python3-tomli git texinfo netcat-traditional \
         ninja-build && \
-    apt-get clean && \
-    pip3 install tomli
+    apt-get clean
 
 ENV QEMU_BASEDIR=/opt/qemu
 WORKDIR $QEMU_BASEDIR
