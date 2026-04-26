@@ -29,6 +29,7 @@ function usage() {
     echo "  --libcxx-repo                  build with LLVM libc++ using a manually checked-out"
     echo "                                 llvm-project repository at libs/llvm-project"
     echo "  --clang                        build with LLVM clang/clang++ instead of GCC"
+    echo "                                 (requires --libcxx or --libcxx-repo)"
     echo "  --clang-suffix <suffix>        version suffix appended to clang tool names"
     echo "                                 (e.g. -18 selects clang-18, clang++-18, llvm-ar-18, ...)"
     echo "  --aarch64                      target AArch64 (required with --clang for 64-bit builds)"
@@ -119,9 +120,19 @@ if [ $CLANG -eq 1 ]
 then
     : ${CC:="clang${CLANG_SUFFIX}"}
     : ${CXX:="clang++${CLANG_SUFFIX}"}
+    # Some LLVM installations only provide a versioned C driver (e.g. clang-22)
+    # but not a versioned C++ driver or other tools (clang++-22, llvm-ar-22, …).
+    # Detect this and fall back to unversioned names for those tools.
+    CLANG_TOOL_SUFFIX="${CLANG_SUFFIX}"
+    if [ -n "${CLANG_SUFFIX}" ] && ! command -v "clang++${CLANG_SUFFIX}" >/dev/null 2>&1
+    then
+        CLANG_TOOL_SUFFIX=""
+        CXX="clang++"
+    fi
 else
     : ${CC:="${TOOLPREFIX}gcc"}
     : ${CXX:="${TOOLPREFIX}g++"}
+    CLANG_TOOL_SUFFIX=""
 fi
 
 if [ ! -x "`which $CC 2> /dev/null`" ]
@@ -150,6 +161,12 @@ then
     exit 1
 fi
 
+if [ $CLANG -eq 1 ] && [ $LIBCXX_ENABLED -eq 0 ]
+then
+    echo "Error: --clang requires --libcxx or --libcxx-repo for C++ standard library headers." >&2
+    exit 1
+fi
+
 if [ "$STDDEF_INCPATH" = "" ]
 then
     # TODO this is probably very GCC-specific
@@ -170,7 +187,7 @@ then
     mapfile -t CXX_INCPATHS < <(echo | "$CXX" -v -E -x c++ - 2>&1 | grep "^ /.*include/c++" | sed -e "s/^ //")
 fi
 
-if [ ${#CXX_INCPATHS[@]} -eq 0 ]
+if [ ${#CXX_INCPATHS[@]} -eq 0 ] && [ $CLANG -eq 0 ]
 then
     echo "Error: Unable to determine include paths for C++, exiting" >&2
     exit 1
@@ -269,6 +286,14 @@ CIRCLE_DEFINES="$CIRCLE_DEFINES -DKERNEL_MAX_SIZE=${KERNEL_MAX_SIZE}"
         then
             echo "SUFFIX = ${CLANG_SUFFIX}"
         fi
+        if [ "${CLANG_TOOL_SUFFIX}" != "${CLANG_SUFFIX}" ]
+        then
+            echo "CPP = clang++${CLANG_TOOL_SUFFIX}"
+            echo "AR = llvm-ar${CLANG_TOOL_SUFFIX}"
+            echo "OBJCOPY = llvm-objcopy${CLANG_TOOL_SUFFIX}"
+            echo "OBJDUMP = llvm-objdump${CLANG_TOOL_SUFFIX}"
+            echo "CPPFILT = llvm-cxxfilt${CLANG_TOOL_SUFFIX}"
+        fi
     fi
 ) > libs/circle/Config.mk
 
@@ -320,17 +345,26 @@ then
     else
         CLANG_TARGET="--target=arm-none-eabi"
     fi
+    # Derive the compiler-rt builtins filename for this target.
+    # With COMPILER_RT_INSTALL_LIBRARY_DIR=lib, cmake installs to
+    # $(LIBCXX_INSTALL_DIR)/lib/libclang_rt.builtins-<arch>.a (flat, arch-suffixed).
+    if [ $SIXTY_FOUR_BIT -eq 1 ]
+    then
+        COMPILER_RT_BUILTINS_FILE="libclang_rt.builtins-aarch64.a"
+    else
+        COMPILER_RT_BUILTINS_FILE="libclang_rt.builtins-arm.a"
+    fi
     export \
         CPPFLAGS_FOR_TARGET="-isystem \"$CIRCLEHOME/include\" -isystem \"$CIRCLEHOME/addon\" -isystem \"$TOPDIR/include\"" \
         CC_FOR_TARGET="clang${CLANG_SUFFIX} ${CLANG_TARGET}" \
-        CXX_FOR_TARGET="clang++${CLANG_SUFFIX} ${CLANG_TARGET}" \
+        CXX_FOR_TARGET="clang++${CLANG_TOOL_SUFFIX} ${CLANG_TARGET}" \
         GCC_FOR_TARGET="clang${CLANG_SUFFIX} ${CLANG_TARGET}" \
-        AR_FOR_TARGET="llvm-ar${CLANG_SUFFIX}" \
+        AR_FOR_TARGET="llvm-ar${CLANG_TOOL_SUFFIX}" \
         AS_FOR_TARGET="clang${CLANG_SUFFIX} ${CLANG_TARGET}" \
         LD_FOR_TARGET="clang${CLANG_SUFFIX} ${CLANG_TARGET}" \
-        RANLIB_FOR_TARGET="llvm-ranlib${CLANG_SUFFIX}" \
-        OBJCOPY_FOR_TARGET="llvm-objcopy${CLANG_SUFFIX}" \
-        OBJDUMP_FOR_TARGET="llvm-objdump${CLANG_SUFFIX}"
+        RANLIB_FOR_TARGET="llvm-ranlib${CLANG_TOOL_SUFFIX}" \
+        OBJCOPY_FOR_TARGET="llvm-objcopy${CLANG_TOOL_SUFFIX}" \
+        OBJDUMP_FOR_TARGET="llvm-objdump${CLANG_TOOL_SUFFIX}"
 else
     export \
         CPPFLAGS_FOR_TARGET="-isystem \"$CIRCLEHOME/include\" -isystem \"$CIRCLEHOME/addon\" -isystem \"$TOPDIR/include\"" \
@@ -387,6 +421,7 @@ echo "CFLAGS_ISYSTEM='$CFLAGS_ISYSTEM'"
 # create circle-stdlib's configuration file
 (
     echo "CC = ${CC}"
+    echo "CXX = ${CXX}"
     echo "ARCH = ${ARCH}"
     echo "ARCHCPU = ${ARCHCPU}"
     echo "TOOLPREFIX = ${TOOLPREFIX}"
@@ -410,6 +445,14 @@ echo "CFLAGS_ISYSTEM='$CFLAGS_ISYSTEM'"
     then
         echo "SUFFIX = ${CLANG_SUFFIX}"
     fi
+    if [ $CLANG -eq 1 ] && [ "${CLANG_TOOL_SUFFIX}" != "${CLANG_SUFFIX}" ]
+    then
+        echo "CPP = clang++${CLANG_TOOL_SUFFIX}"
+        echo "AR = llvm-ar${CLANG_TOOL_SUFFIX}"
+        echo "OBJCOPY = llvm-objcopy${CLANG_TOOL_SUFFIX}"
+        echo "OBJDUMP = llvm-objdump${CLANG_TOOL_SUFFIX}"
+        echo "CPPFILT = llvm-cxxfilt${CLANG_TOOL_SUFFIX}"
+    fi
     echo "CFLAGS += -nostdinc ${CFLAGS_ISYSTEM}"
     echo "DEFINE += -D_GNU_SOURCE -D_POSIX_C_SOURCE=200809L"
     echo 'CIRCLE_STDLIB_CIRCLE_LIBS = \'
@@ -432,7 +475,14 @@ echo "CFLAGS_ISYSTEM='$CFLAGS_ISYSTEM'"
         then
             echo "LIBCXX_REPO = 1"
         fi
-        echo "LDFLAGS += --eh-frame-hdr"
+        if [ $CLANG -eq 1 ]
+        then
+            echo "LDFLAGS += -fuse-ld=lld"
+            echo "LDFLAGS += -Wl,--eh-frame-hdr"
+            echo "LDFLAGS += -Wl,--no-dependent-libraries"
+        else
+            echo "LDFLAGS += --eh-frame-hdr"
+        fi
         echo "DEFINE += -D_GNU_SOURCE -D_POSIX_C_SOURCE=200809L"
         echo 'CIRCLE_STDLIB_LIBS = \'
         echo '    $(LIBCXX_INSTALL_DIR)/lib/liblibcxx-support.a \'
@@ -443,6 +493,10 @@ echo "CFLAGS_ISYSTEM='$CFLAGS_ISYSTEM'"
         echo '    $(CIRCLE_STDLIB_INSTALL_DIR)/lib/libm.a \'
         echo '    $(CIRCLE_STDLIB_INSTALL_DIR)/lib/libc.a \'
         echo '    $(CIRCLE_STDLIB_INSTALL_DIR)/lib/libcirclenewlib.a \'
+        if [ $CLANG -eq 1 ]
+        then
+            echo "    \$(LIBCXX_INSTALL_DIR)/lib/${COMPILER_RT_BUILTINS_FILE} \\"
+        fi
         echo '    $(CIRCLE_STDLIB_CIRCLE_LIBS)'
     else
         echo 'CIRCLE_STDLIB_LIBS = \'

@@ -5,11 +5,9 @@ include Config.mk
 ifeq ($(strip $(CLANG)),1)
 TOOLCHAIN_SUFFIX = -clang
 CMAKE_COMPILER_OVERRIDE = \
-	-DCMAKE_C_COMPILER=clang$(SUFFIX) \
-	-DCMAKE_CXX_COMPILER=clang++$(SUFFIX) \
-	-DCMAKE_ASM_COMPILER=clang$(SUFFIX) \
-	-DCMAKE_AR=llvm-ar$(SUFFIX) \
-	-DCMAKE_RANLIB=llvm-ranlib$(SUFFIX)
+	-DCMAKE_C_COMPILER=$(CC) \
+	-DCMAKE_CXX_COMPILER=$(CXX) \
+	-DCMAKE_ASM_COMPILER=$(CC)
 # Headers from the installed circle-newlib take priority over the sysroot when
 # building Circle components.  The variable is empty for GCC builds so passing
 # it unconditionally is safe.
@@ -69,7 +67,7 @@ endif
 		-B build/libc++ \
 		-C cmake/caches/circle-newlib-$(NEWLIB_ARCH).cmake \
 		-G Ninja \
-		-DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
+		-DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind;compiler-rt" \
 		-DCMAKE_TOOLCHAIN_FILE="$(CURDIR)/cmake/toolchains/toolchain-$(NEWLIB_ARCH)$(TOOLCHAIN_SUFFIX).cmake" \
 		$(CMAKE_COMPILER_OVERRIDE) \
 		-DCIRCLE_ARCHCPU="$(ARCHCPU)" \
@@ -85,7 +83,7 @@ endif
 		-DCMAKE_INSTALL_MESSAGE=NEVER \
 		-DCMAKE_INSTALL_PREFIX="$(LIBCXX_INSTALL_DIR)"
 	@echo "Building libc++..."
-	cmake --build build/libc++ --target cxx --target cxxabi --target unwind
+	cmake --build build/libc++ --target cxx --target cxxabi --target unwind --target builtins
 	@echo "Installing libc++..."
 	cmake --build build/libc++ --target install
 
