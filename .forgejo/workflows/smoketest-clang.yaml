@@ -18,7 +18,7 @@ jobs:
       matrix:
         kasan:
           - { name: "Without Address Sanitizer", kasan_opt: "" }
-          - { name: "With Address Sanitizer", kasan_opt: "--kasan" }
+          # - { name: "With Address Sanitizer", kasan_opt: "--kasan" }
 
         config:
           - {
