@@ -6,7 +6,7 @@ on:
     branches:
       - master
       - develop
-      - clang-build
+      # - clang-build Disabled, known to work
 
 jobs:
   test:
