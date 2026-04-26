@@ -1,4 +1,4 @@
-FROM data.forgejo.org/oci/node:20-bullseye
+FROM data.forgejo.org/oci/node:20-bookworm
 
 RUN apt-get update && \
     apt-get install -y \
