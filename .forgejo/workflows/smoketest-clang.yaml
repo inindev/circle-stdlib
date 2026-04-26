@@ -10,6 +10,9 @@ on:
 
 jobs:
   test-clang:
+    defaults:
+        run:
+          shell: bash -x {0}  # applies set -x to every run: step
     strategy:
       fail-fast: true
       matrix:
