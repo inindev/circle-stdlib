@@ -291,6 +291,7 @@ CIRCLE_DEFINES="$CIRCLE_DEFINES -DKERNEL_MAX_SIZE=${KERNEL_MAX_SIZE}"
     if [ $CLANG -eq 1 ]
     then
         echo "CLANG = 1"
+        echo "CC = clang${CLANG_SUFFIX}"
         if [ -n "$CLANG_SUFFIX" ]
         then
             echo "SUFFIX = ${CLANG_SUFFIX}"
