@@ -6,7 +6,7 @@ services:
     image: docker:dind
     container_name: 'docker_dind'
     privileged: 'true'
-    command: ['dockerd', '-H', 'tcp://0.0.0.0:2375', '--tls=false']
+    command: ['dockerd', '-H', 'tcp://0.0.0.0:2375', '--tls=false', '--insecure-registry', 'ci-registry:5000']
     restart: 'unless-stopped'
 
   runner:
