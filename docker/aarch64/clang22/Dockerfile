@@ -1,4 +1,4 @@
-FROM codeberg.org/larchcone/ci/node-circle-stdlib-aarch64-base:qemu-9.1.1-v2
+FROM ci-registry:5000/circle-stdlib/base-aarch64:qemu-9.1.1-v2
 
 RUN wget -nv https://github.com/llvm/llvm-project/releases/download/llvmorg-22.1.4/LLVM-22.1.4-Linux-ARM64.tar.xz && \
     tar -xf LLVM-22.1.4-Linux-ARM64.tar.xz && \

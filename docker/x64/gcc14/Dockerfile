@@ -1,4 +1,4 @@
-FROM codeberg.org/larchcone/ci/node-circle-stdlib-x64-base:qemu-9.1.1-v3
+FROM ci-registry:5000/circle-stdlib/base-x64:qemu-9.1.1-v4
 
 RUN wget -nv https://developer.arm.com/-/media/Files/downloads/gnu/14.3.rel1/binrel/arm-gnu-toolchain-14.3.rel1-x86_64-arm-none-eabi.tar.xz && \
     wget -nv https://developer.arm.com/-/media/Files/downloads/gnu/14.3.rel1/binrel/arm-gnu-toolchain-14.3.rel1-x86_64-aarch64-none-elf.tar.xz && \
