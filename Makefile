@@ -12,9 +12,13 @@ CMAKE_COMPILER_OVERRIDE = \
 # building Circle components.  The variable is empty for GCC builds so passing
 # it unconditionally is safe.
 CIRCLE_NEWLIB_HEADERS = -isystem $(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARCH)/include
+LLVM_RUNTIMES = "libcxx;libcxxabi;libunwind;compiler-rt"
+LIBCXX_BUILD_TARGETS = --target cxx --target cxxabi --target unwind --target builtins
 else
 TOOLCHAIN_SUFFIX =
 CMAKE_COMPILER_OVERRIDE =
+LLVM_RUNTIMES = "libcxx;libcxxabi;libunwind"
+LIBCXX_BUILD_TARGETS = --target cxx --target cxxabi --target unwind
 endif
 
 ifdef LIBCXX_INSTALL_DIR
@@ -67,7 +71,7 @@ endif
 		-B build/libc++ \
 		-C cmake/caches/circle-newlib-$(NEWLIB_ARCH).cmake \
 		-G Ninja \
-		-DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind;compiler-rt" \
+		-DLLVM_ENABLE_RUNTIMES=$(LLVM_RUNTIMES) \
 		-DCMAKE_TOOLCHAIN_FILE="$(CURDIR)/cmake/toolchains/toolchain-$(NEWLIB_ARCH)$(TOOLCHAIN_SUFFIX).cmake" \
 		$(CMAKE_COMPILER_OVERRIDE) \
 		-DCIRCLE_ARCHCPU="$(ARCHCPU)" \
@@ -83,7 +87,7 @@ endif
 		-DCMAKE_INSTALL_MESSAGE=NEVER \
 		-DCMAKE_INSTALL_PREFIX="$(LIBCXX_INSTALL_DIR)"
 	@echo "Building libc++..."
-	cmake --build build/libc++ --target cxx --target cxxabi --target unwind --target builtins
+	cmake --build build/libc++ $(LIBCXX_BUILD_TARGETS)
 	@echo "Installing libc++..."
 	cmake --build build/libc++ --target install
 
