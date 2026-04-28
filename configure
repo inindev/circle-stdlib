@@ -30,8 +30,6 @@ function usage() {
     echo "                                 llvm-project repository at libs/llvm-project"
     echo "  --clang                        build with LLVM clang/clang++ instead of GCC"
     echo "                                 (requires --libcxx or --libcxx-repo)"
-    echo "  --clang-suffix <suffix>        version suffix appended to clang tool names"
-    echo "                                 (e.g. -18 selects clang-18, clang++-18, llvm-ar-18, ...)"
     echo "  --aarch64                      target AArch64 (required with --clang for 64-bit builds)"
 }
 
@@ -39,7 +37,7 @@ function usage() {
 cd "${BASH_SOURCE%/*}" || exit 1
 TOPDIR="$PWD"
 
-TEMP=$(getopt -o dhkno:p:r:s: --long debug,help,kasan,no-circle-build,no-cpp,option:,opt-tls,qemu,prefix:,raspberrypi:,script-debug,softfp,stddefpath:,libcxx,libcxx-repo,kernel-max-size:,clang,clang-suffix:,aarch64 \
+TEMP=$(getopt -o dhkno:p:r:s: --long debug,help,kasan,no-circle-build,no-cpp,option:,opt-tls,qemu,prefix:,raspberrypi:,script-debug,softfp,stddefpath:,libcxx,libcxx-repo,kernel-max-size:,clang,aarch64 \
      -n 'configure' -- "$@")
 
 if [ $? != 0 ] ; then echo usage; exit 1 ; fi
@@ -70,7 +68,6 @@ LIBCXX_BUILDMODE=Release
 LIBCXX_REPO=0
 KERNEL_MAX_SIZE_MB=4
 CLANG=0
-CLANG_SUFFIX=""
 
 while true ; do
     case "$1" in
@@ -90,7 +87,6 @@ while true ; do
 	--libcxx) LIBCXX_ENABLED=1 ; STDLIB_SUPPORT=4 ; shift;;
 	--libcxx-repo) LIBCXX_ENABLED=1 ; STDLIB_SUPPORT=4 ; LIBCXX_REPO=1 ; shift;;
 	--clang) CLANG=1 ; shift;;
-	--clang-suffix) CLANG_SUFFIX="$2" ; shift 2;;
 	--aarch64) SIXTY_FOUR_BIT=1 ; NEWLIB_ARCH="aarch64-none-circle" ; shift;;
 	--) shift ; break ;;
 	*) echo "Internal error!" ; exit 1;;
@@ -118,21 +114,11 @@ for arg do echo '--> '"\`$arg'" ; done
 
 if [ $CLANG -eq 1 ]
 then
-    : ${CC:="clang${CLANG_SUFFIX}"}
-    : ${CXX:="clang++${CLANG_SUFFIX}"}
-    # Some LLVM installations only provide a versioned C driver (e.g. clang-22)
-    # but not a versioned C++ driver or other tools (clang++-22, llvm-ar-22, …).
-    # Detect this and fall back to unversioned names for those tools.
-    CLANG_TOOL_SUFFIX="${CLANG_SUFFIX}"
-    if [ -n "${CLANG_SUFFIX}" ] && ! command -v "clang++${CLANG_SUFFIX}" >/dev/null 2>&1
-    then
-        CLANG_TOOL_SUFFIX=""
-        CXX="clang++"
-    fi
+    : ${CC:="clang"}
+    : ${CXX:="clang++"}
 else
     : ${CC:="${TOOLPREFIX}gcc"}
     : ${CXX:="${TOOLPREFIX}g++"}
-    CLANG_TOOL_SUFFIX=""
 fi
 
 if [ ! -x "`which $CC 2> /dev/null`" ]
@@ -291,16 +277,12 @@ CIRCLE_DEFINES="$CIRCLE_DEFINES -DKERNEL_MAX_SIZE=${KERNEL_MAX_SIZE}"
     if [ $CLANG -eq 1 ]
     then
         echo "CLANG = 1"
-        echo "CC = clang${CLANG_SUFFIX}"
-        if [ -n "$CLANG_SUFFIX" ]
-        then
-            echo "SUFFIX = ${CLANG_SUFFIX}"
-        fi
-        echo "CPP = clang++${CLANG_TOOL_SUFFIX}"
-        echo "AR = llvm-ar${CLANG_TOOL_SUFFIX}"
-        echo "OBJCOPY = llvm-objcopy${CLANG_TOOL_SUFFIX}"
-        echo "OBJDUMP = llvm-objdump${CLANG_TOOL_SUFFIX}"
-        echo "CPPFILT = llvm-cxxfilt${CLANG_TOOL_SUFFIX}"
+        echo "CC = clang"
+        echo "CPP = clang++"
+        echo "AR = llvm-ar"
+        echo "OBJCOPY = llvm-objcopy"
+        echo "OBJDUMP = llvm-objdump"
+        echo "CPPFILT = llvm-cxxfilt"
     fi
 ) > libs/circle/Config.mk
 
@@ -363,15 +345,15 @@ then
     fi
     export \
         CPPFLAGS_FOR_TARGET="-isystem \"$CIRCLEHOME/include\" -isystem \"$CIRCLEHOME/addon\" -isystem \"$TOPDIR/include\"" \
-        CC_FOR_TARGET="clang${CLANG_SUFFIX} ${CLANG_TARGET}" \
-        CXX_FOR_TARGET="clang++${CLANG_TOOL_SUFFIX} ${CLANG_TARGET}" \
-        GCC_FOR_TARGET="clang${CLANG_SUFFIX} ${CLANG_TARGET}" \
-        AR_FOR_TARGET="llvm-ar${CLANG_TOOL_SUFFIX}" \
-        AS_FOR_TARGET="clang${CLANG_SUFFIX} ${CLANG_TARGET}" \
-        LD_FOR_TARGET="clang${CLANG_SUFFIX} ${CLANG_TARGET}" \
-        RANLIB_FOR_TARGET="llvm-ranlib${CLANG_TOOL_SUFFIX}" \
-        OBJCOPY_FOR_TARGET="llvm-objcopy${CLANG_TOOL_SUFFIX}" \
-        OBJDUMP_FOR_TARGET="llvm-objdump${CLANG_TOOL_SUFFIX}"
+        CC_FOR_TARGET="clang ${CLANG_TARGET}" \
+        CXX_FOR_TARGET="clang++ ${CLANG_TARGET}" \
+        GCC_FOR_TARGET="clang ${CLANG_TARGET}" \
+        AR_FOR_TARGET="llvm-ar" \
+        AS_FOR_TARGET="clang ${CLANG_TARGET}" \
+        LD_FOR_TARGET="clang ${CLANG_TARGET}" \
+        RANLIB_FOR_TARGET="llvm-ranlib" \
+        OBJCOPY_FOR_TARGET="llvm-objcopy" \
+        OBJDUMP_FOR_TARGET="llvm-objdump"
 else
     export \
         CPPFLAGS_FOR_TARGET="-isystem \"$CIRCLEHOME/include\" -isystem \"$CIRCLEHOME/addon\" -isystem \"$TOPDIR/include\"" \
@@ -448,17 +430,13 @@ echo "CFLAGS_ISYSTEM='$CFLAGS_ISYSTEM'"
     echo "OBJDUMP_FOR_TARGET = ${OBJDUMP_FOR_TARGET}"
     echo "NEWLIB_ARCH = ${NEWLIB_ARCH}"
     echo "CLANG = ${CLANG}"
-    if [ -n "$CLANG_SUFFIX" ]
-    then
-        echo "SUFFIX = ${CLANG_SUFFIX}"
-    fi
     if [ $CLANG -eq 1 ]
     then
-        echo "CPP = clang++${CLANG_TOOL_SUFFIX}"
-        echo "AR = llvm-ar${CLANG_TOOL_SUFFIX}"
-        echo "OBJCOPY = llvm-objcopy${CLANG_TOOL_SUFFIX}"
-        echo "OBJDUMP = llvm-objdump${CLANG_TOOL_SUFFIX}"
-        echo "CPPFILT = llvm-cxxfilt${CLANG_TOOL_SUFFIX}"
+        echo "CPP = clang++"
+        echo "AR = llvm-ar"
+        echo "OBJCOPY = llvm-objcopy"
+        echo "OBJDUMP = llvm-objdump"
+        echo "CPPFILT = llvm-cxxfilt"
     fi
     echo "CFLAGS += -nostdinc ${CFLAGS_ISYSTEM}"
     echo "DEFINE += -D_GNU_SOURCE -D_POSIX_C_SOURCE=200809L"
