@@ -56,7 +56,11 @@ LIBCXX_FLAGS = $(ARCHCPU) -nostdinc --sysroot=$(NEWLIB_INSTALL_DIR)/$(NEWLIB_ARC
 	-isystem $(STDDEF_INCPATH) -isystem $(CIRCLEHOME)/addon \
 	-isystem $(CURDIR)/include -isystem $(CURDIR)/libs/libcxx-threading/include \
 	-D_GNU_SOURCE -D__circle__ -D_POSIX_C_SOURCE=200809L -D_POSIX_TIMERS=1 \
-	-D_POSIX_MONOTONIC_CLOCK=200112L -U__FRACT_FBIT__ -Wno-alloc-size-larger-than
+	-D_POSIX_MONOTONIC_CLOCK=200112L -U__FRACT_FBIT__
+
+ifneq ($(strip $(CLANG)),1)
+LIBCXX_FLAGS += -Wno-alloc-size-larger-than
+endif
 
 libcxx: $(LIBCXX_INSTALL_DIR)/lib/libc++.a
 
