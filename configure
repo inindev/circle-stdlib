@@ -296,14 +296,11 @@ CIRCLE_DEFINES="$CIRCLE_DEFINES -DKERNEL_MAX_SIZE=${KERNEL_MAX_SIZE}"
         then
             echo "SUFFIX = ${CLANG_SUFFIX}"
         fi
-        if [ "${CLANG_TOOL_SUFFIX}" != "${CLANG_SUFFIX}" ]
-        then
-            echo "CPP = clang++${CLANG_TOOL_SUFFIX}"
-            echo "AR = llvm-ar${CLANG_TOOL_SUFFIX}"
-            echo "OBJCOPY = llvm-objcopy${CLANG_TOOL_SUFFIX}"
-            echo "OBJDUMP = llvm-objdump${CLANG_TOOL_SUFFIX}"
-            echo "CPPFILT = llvm-cxxfilt${CLANG_TOOL_SUFFIX}"
-        fi
+        echo "CPP = clang++${CLANG_TOOL_SUFFIX}"
+        echo "AR = llvm-ar${CLANG_TOOL_SUFFIX}"
+        echo "OBJCOPY = llvm-objcopy${CLANG_TOOL_SUFFIX}"
+        echo "OBJDUMP = llvm-objdump${CLANG_TOOL_SUFFIX}"
+        echo "CPPFILT = llvm-cxxfilt${CLANG_TOOL_SUFFIX}"
     fi
 ) > libs/circle/Config.mk
 
@@ -455,7 +452,7 @@ echo "CFLAGS_ISYSTEM='$CFLAGS_ISYSTEM'"
     then
         echo "SUFFIX = ${CLANG_SUFFIX}"
     fi
-    if [ $CLANG -eq 1 ] && [ "${CLANG_TOOL_SUFFIX}" != "${CLANG_SUFFIX}" ]
+    if [ $CLANG -eq 1 ]
     then
         echo "CPP = clang++${CLANG_TOOL_SUFFIX}"
         echo "AR = llvm-ar${CLANG_TOOL_SUFFIX}"
