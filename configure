@@ -283,6 +283,7 @@ CIRCLE_DEFINES="$CIRCLE_DEFINES -DKERNEL_MAX_SIZE=${KERNEL_MAX_SIZE}"
         echo "OBJCOPY = llvm-objcopy"
         echo "OBJDUMP = llvm-objdump"
         echo "CPPFILT = llvm-cxxfilt"
+        echo "WARNINGS += -Wno-gnu-designator -Wno-main"
     fi
 ) > libs/circle/Config.mk
 
