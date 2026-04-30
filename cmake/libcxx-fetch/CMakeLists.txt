@@ -4,8 +4,8 @@ project(FetchLLVM NONE)
 include(FetchContent)
 FetchContent_Declare(
     llvm_project
-    URL                      https://codeberg.org/larchcone/llvm-project/archive/circle-stdlib-22.1.3-v1.tar.gz
-    URL_HASH                 SHA256=c6ff654e1aeaf523d9db4b0d1139f89ca460e8a5dac5aca88bfb4f2dfdf8fbce
+    URL                      https://codeberg.org/larchcone/llvm-project/archive/circle-stdlib-22.1.3-v2.tar.gz
+    URL_HASH                 SHA256=6859a0a721153f918e6ef565917a4c35deb780225e1d0106d54faa1e71c727ad
     DOWNLOAD_EXTRACT_TIMESTAMP FALSE
     SOURCE_DIR               "${CMAKE_CURRENT_SOURCE_DIR}/../../libs/llvm-project"
 )
