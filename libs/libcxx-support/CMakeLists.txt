@@ -24,7 +24,9 @@ target_include_directories(libcxx-support SYSTEM PRIVATE
 
 target_compile_features(libcxx-support PRIVATE cxx_std_14)
 
-target_compile_options(libcxx-support PRIVATE -Wno-alloc-size-larger-than)
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    target_compile_options(libcxx-support PRIVATE -Wno-alloc-size-larger-than)
+endif()
 
 target_compile_definitions(libcxx-support PRIVATE _POSIX_C_SOURCE=200809L)
 
