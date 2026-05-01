@@ -21,28 +21,29 @@ jobs:
           - { name: "With Address Sanitizer", kasan_opt: "--kasan" }
 
         config:
-          - {
-              name: "host-x64-target-arm",
-              runs-on: docker,
-              container: "ci-registry:5000/circle-stdlib/llvm-x64:clang22-v4",
-              aarch64-opt: "",
-              circle-machine: "1",
-              qemu-bin: "qemu-system-arm",
-              qemu-machine: "raspi0",
-              qemu-kernel-opt: "-bios",
-              qemu-img: "kernel.img",
-            }
-          - {
-              name: "host-x64-target-aarch64",
-              runs-on: docker,
-              container: "ci-registry:5000/circle-stdlib/llvm-x64:clang22-v4",
-              aarch64-opt: "--aarch64",
-              circle-machine: "3",
-              qemu-bin: "qemu-system-aarch64",
-              qemu-machine: "raspi3b",
-              qemu-kernel-opt: "-kernel",
-              qemu-img: "kernel8.img",
-            }
+          # Disabled because of long runtime
+          # - {
+          #     name: "host-x64-target-arm",
+          #     runs-on: docker,
+          #     container: "ci-registry:5000/circle-stdlib/llvm-x64:clang22-v4",
+          #     aarch64-opt: "",
+          #     circle-machine: "1",
+          #     qemu-bin: "qemu-system-arm",
+          #     qemu-machine: "raspi0",
+          #     qemu-kernel-opt: "-bios",
+          #     qemu-img: "kernel.img",
+          #   }
+          # - {
+          #     name: "host-x64-target-aarch64",
+          #     runs-on: docker,
+          #     container: "ci-registry:5000/circle-stdlib/llvm-x64:clang22-v4",
+          #     aarch64-opt: "--aarch64",
+          #     circle-machine: "3",
+          #     qemu-bin: "qemu-system-aarch64",
+          #     qemu-machine: "raspi3b",
+          #     qemu-kernel-opt: "-kernel",
+          #     qemu-img: "kernel8.img",
+          #   }
           - {
               name: "host-aarch64-target-arm",
               runs-on: ubuntu-arm-22.04,
