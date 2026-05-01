@@ -277,12 +277,6 @@ CIRCLE_DEFINES="$CIRCLE_DEFINES -DKERNEL_MAX_SIZE=${KERNEL_MAX_SIZE}"
     if [ $CLANG -eq 1 ]
     then
         echo "CLANG = 1"
-        echo "CC = clang"
-        echo "CPP = clang++"
-        echo "AR = llvm-ar"
-        echo "OBJCOPY = llvm-objcopy"
-        echo "OBJDUMP = llvm-objdump"
-        echo "CPPFILT = llvm-cxxfilt"
         echo "WARNINGS += -Wno-gnu-designator -Wno-main -Wno-extern-c-compat"
     fi
 ) > libs/circle/Config.mk
