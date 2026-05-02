@@ -155,17 +155,7 @@ fi
 
 if [ "$STDDEF_INCPATH" = "" ]
 then
-    if [ $CLANG -eq 1 ]
-    then
-        # clang --print-resource-dir returns e.g. /path/lib/clang/22; stddef.h lives under include/
-        # Use if-syntax so set -e does not trigger if clang exits non-zero.
-        if _resource_dir=$("$CC" --print-resource-dir 2>/dev/null); then
-            STDDEF_INCPATH="$_resource_dir/include"
-        fi
-    else
-        # GCC-specific: parse include search paths from verbose preprocessor output
-        STDDEF_INCPATH=$(echo | "$CC" -v -x c -E - 2>&1 | grep "^ /.*include$" | head -1 | sed -e "s/ //")
-    fi
+    STDDEF_INCPATH=$("$CC" -print-file-name=include)
 fi
 
 if [ ! -f "$STDDEF_INCPATH/stddef.h" ]
