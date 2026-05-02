@@ -27,7 +27,7 @@ jobs:
           - {
               name: "host-x64-target-arm",
               runs-on: docker,
-              container: "ci-registry:5000/circle-stdlib/gcc-x64:gcc15-v1",
+              container: "ci-registry:5000/circle-stdlib/compilers-x64:v1",
               prefix: "arm-none-eabi-",
               circle-machine: "1",
               qemu-bin: "qemu-system-arm",
@@ -38,7 +38,7 @@ jobs:
           - {
               name: "host-x64-target-aarch64",
               runs-on: docker,
-              container: "ci-registry:5000/circle-stdlib/gcc-x64:gcc15-v1",
+              container: "ci-registry:5000/circle-stdlib/compilers-x64:v1",
               prefix: "aarch64-none-elf-",
               circle-machine: "3",
               qemu-bin: "qemu-system-aarch64",
@@ -49,7 +49,7 @@ jobs:
           - {
               name: "host-aarch64-target-arm",
               runs-on: ubuntu-arm-22.04,
-              container: "ci-registry:5000/circle-stdlib/gcc-aarch64:gcc15-v1",
+              container: "ci-registry:5000/circle-stdlib/compilers-aarch64:v1",
               prefix: "arm-none-eabi-",
               circle-machine: "1",
               qemu-bin: "qemu-system-arm",
@@ -60,7 +60,7 @@ jobs:
           - {
               name: "host-aarch64-target-aarch64",
               runs-on: ubuntu-arm-22.04,
-              container: "ci-registry:5000/circle-stdlib/gcc-aarch64:gcc15-v1",
+              container: "ci-registry:5000/circle-stdlib/compilers-aarch64:v1",
               prefix: "aarch64-none-elf-",
               circle-machine: "3",
               qemu-bin: "qemu-system-aarch64",
@@ -136,3 +136,9 @@ jobs:
         run: |
           cd tests/04-netdb
           ./run_test.sh
+
+      - name: Run Circle standalone build with STDLIB_SUPPORT=1
+        run: |
+          cd libs/circle
+          sed -i 's/STDLIB_SUPPORT.*=.*$/STDLIB_SUPPORT = 1/' Config.mk
+
