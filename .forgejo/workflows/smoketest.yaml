@@ -141,4 +141,8 @@ jobs:
         run: |
           cd libs/circle
           sed -i 's/STDLIB_SUPPORT.*=.*$/STDLIB_SUPPORT = 1/' Config.mk
+          ./makeall clean
+          ./makeall
+          make -C sample/01-gpiosimple
+
 
