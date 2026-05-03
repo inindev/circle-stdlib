@@ -10,18 +10,16 @@ on:
 
 jobs:
   test:
+    defaults:
+      run:
+        shell: bash -x {0} # applies set -x to every run: step
+
     strategy:
       fail-fast: true
       matrix:
         kasan:
-          - {
-              name: "Without Address Sanitizer",
-              kasan_opt: ""
-            }
-          - {
-              name: "With Address Sanitizer",
-              kasan_opt: "--kasan"
-            }
+          - { name: "Without Address Sanitizer", kasan_opt: "" }
+          - { name: "With Address Sanitizer", kasan_opt: "--kasan" }
 
         config:
           - {
@@ -68,7 +66,7 @@ jobs:
               qemu-kernel-opt: "-kernel",
               qemu-img: "kernel8.img",
             }
-  
+
     name: ${{ matrix.config.name }} - ${{ matrix.kasan.name }}
 
     # TODO The syntax doesn't work for unknown reasons.
@@ -154,5 +152,3 @@ jobs:
           ./makeall clean
           ./makeall
           make -C sample/01-gpiosimple
-
-
