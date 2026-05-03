@@ -38,16 +38,20 @@ Raspberry Pi bare-metal environment [Circle](https://github.com/rsta2/circle).
 [circle-newlib](https://codeberg.org/larchcone/circle-newlib) contains the changes for
 building Newlib in combination with Circle.
 
-Historically C++ standard library support was provided by using
+Historically C++ standard library support in circle-stdlib was provided by using
 [libstdc++](https://gcc.gnu.org/onlinedocs/libstdc++/) as-is from the ARM GNU
 toolchain. Things like containers and algorithms just worked because they
 are platform-independent. However all platform-dependent parts of the C++
 standard library did not work with that approach.
 
 Starting with v20 circle-stdlib implements the option to build circle-stdlib
-with [libc++](https://libcxx.llvm.org/) from the [LLVM project](https://llvm.org/).
-The platform-dependent parts of libc++ are built on top of Circle's
-corresponding classes.
+with [libc++](https://libcxx.llvm.org/) and with clang/clang++
+from the [LLVM project](https://llvm.org/). The platform-dependent parts of 
+libc++ are built on top of Circle's corresponding classes.
+
+There is a fork of the [GitHub llvm-project repository](https://github.com/llvm/llvm-project)
+on Codeberg at [llvm-project](https://codeberg.org/larchcone/llvm-project). This contains minor
+changes for building the `libc++` library in the context of circle-stdlib.
 
 With libc++ comes support in the C++ standard library for:
 
@@ -61,6 +65,14 @@ With libc++ comes support in the C++ standard library for:
 Using libc++ is currently experimental and optional. It may become the default
 in the future.
 
+It is also possible to build the complete project with LLVM's clang and clang++
+compilers (`configure` options `--clang` in combination with `--libcxx`).
+This build does not use gcc at all, neither the
+compiler nor the runtime libraries. Note that the restrictions mentioned in
+[Circle's readme about clang support](https://github.com/rsta2/circle/blob/develop/doc/clang-support.txt)
+apply. Circle and circle-stdlib built with LLVM compilers are not tested as
+thoroughly as the gcc builds.
+
 [mbed TLS](https://tls.mbed.org/) can optionally be used for TLS connections in
 Circle (call configure with `--opt-tls`, see also the
 [README file for circle-mbedtls](circle-mbedtls.md)).
@@ -69,14 +81,19 @@ Circle (call configure with `--opt-tls`, see also the
 
 ### Prerequisites
 
-A toolchain from [Arm GNU Toolchain Downloads](https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads):
+A gcc 15.2.Rel1 toolchain from [Arm GNU Toolchain Downloads](https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads):
 
-* gcc 15.2.Rel1 hosted on Intel Linux or Windows Subsystem for Linux (WSL/WSL2):
+* Hosted on Intel Linux:
   * [AArch32 bare-metal target (arm-none-eabi)](https://developer.arm.com/-/media/Files/downloads/gnu/15.2.rel1/binrel/arm-gnu-toolchain-15.2.rel1-x86_64-arm-none-eabi.tar.xz)
   * [AArch64 ELF bare-metal target (aarch64-none-elf)](https://developer.arm.com/-/media/Files/downloads/gnu/15.2.rel1/binrel/arm-gnu-toolchain-15.2.rel1-x86_64-aarch64-none-elf.tar.xz)
-* gcc 15.2.Rel1 hosted on AArch64 Linux:
+* Hosted on AArch64 Linux:
   * [AArch32 bare-metal target (arm-none-eabi)](https://developer.arm.com/-/media/Files/downloads/gnu/15.2.rel1/binrel/arm-gnu-toolchain-15.2.rel1-aarch64-arm-none-eabi.tar.xz)
   * [AArch64 ELF bare-metal target (aarch64-none-elf)](https://developer.arm.com/-/media/Files/downloads/gnu/15.2.rel1/binrel/arm-gnu-toolchain-15.2.rel1-aarch64-aarch64-none-elf.tar.xz)
+
+Alternatively an [LLVM 22.1.4](https://github.com/llvm/llvm-project/releases/tag/llvmorg-22.1.4) clang/clang++ toolchain from [llvm-project releases](https://github.com/llvm/llvm-project/releases):
+
+* Hosted on Intel Linux: [Linux x86_64](https://github.com/llvm/llvm-project/releases/download/llvmorg-22.1.4/LLVM-22.1.4-Linux-X64.tar.xz)
+* Hosted on AArch64 Linux: [Linux Arm64](https://github.com/llvm/llvm-project/releases/download/llvmorg-22.1.4/LLVM-22.1.4-Linux-ARM64.tar.xz)
 
 ### Building the Libraries
 
@@ -97,7 +114,7 @@ The `configure` script has the following options:
 $ ./configure -h
 usage: configure [ <option> ... ]
 Configure Circle with newlib standard C library
-Optional: libc++ C++ standard library and mbed TLS library
+Optional: libc++ standard C++ library and mbed TLS library
 
 Options:
   -d, --debug                    build with debug information, without optimizer
@@ -120,8 +137,9 @@ Options:
   --libcxx                       build with LLVM libc++ (fetched automatically)
   --libcxx-repo                  build with LLVM libc++ using a manually checked-out
                                  llvm-project repository at libs/llvm-project
-
-
+  --clang                        build with LLVM clang/clang++ instead of GCC
+                                 (requires --libcxx or --libcxx-repo)
+  --aarch64                      target AArch64 (required with --clang for 64-bit builds)
 ```
 
 To clean the project directory, the following commands can be used:
@@ -165,7 +183,8 @@ Version 3 - see the [LICENSE](LICENSE) file for details
 
 * Rene Stange for [Circle](https://github.com/rsta2/circle).
 * The Newlib team for [Newlib](https://sourceware.org/newlib/).
-* The LLVM team for [libc++](https://libcxx.llvm.org/).
+* The gcc team for [gcc](https://gcc.gnu.org/).
+* The LLVM team for [libc++](https://libcxx.llvm.org/) and [Clang](https://clang.llvm.org/).
 * The mbed TLS team for [mbed TLS](https://tls.mbed.org/).
 * The [Mongoose web server library](https://mongoose.ws/).
 * The [nlohmann/json](https://github.com/nlohmann/json) library.
