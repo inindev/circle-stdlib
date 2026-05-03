@@ -50,6 +50,7 @@ jobs:
               container: "ci-registry:5000/circle-stdlib/compilers-aarch64:v1",
               aarch64-opt: "",
               circle-machine: "1",
+              prefix: "arm-none-eabi-", # Only necessary for testing the Circle standalone build
               qemu-bin: "qemu-system-arm",
               qemu-machine: "raspi0",
               qemu-kernel-opt: "-bios",
@@ -61,6 +62,7 @@ jobs:
               container: "ci-registry:5000/circle-stdlib/compilers-aarch64:v1",
               aarch64-opt: "--aarch64",
               circle-machine: "3",
+              prefix: "aarch64-none-elf-", # Only necessary for testing the Circle standalone build
               qemu-bin: "qemu-system-aarch64",
               qemu-machine: "raspi3b",
               qemu-kernel-opt: "-kernel",
@@ -89,7 +91,7 @@ jobs:
 
       - name: Configure circle-stdlib with QEMU support and clang/libc++
         run: |
-          set -x ; ./configure --clang ${{ matrix.config.aarch64-opt }} -r ${{ matrix.config.circle-machine }} --qemu --libcxx ${{ matrix.kasan.kasan_opt }} --kernel-max-size 8
+          set -x ; ./configure --clang ${{ matrix.config.aarch64-opt }} -p ${{ matrix.config.prefix }} -r ${{ matrix.config.circle-machine }} --qemu --libcxx ${{ matrix.kasan.kasan_opt }} --kernel-max-size 8
 
       - name: Build libraries
         run: make -j$(nproc)

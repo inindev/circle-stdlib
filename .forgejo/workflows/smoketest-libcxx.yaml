@@ -140,11 +140,19 @@ jobs:
           cd tests/06-filesystem
           ./run_test.sh
 
+      - name: Run Circle standalone build with STDLIB_SUPPORT=0
+        run: |
+          cd libs/circle
+          sed -i 's/STDLIB_SUPPORT.*=.*$/STDLIB_SUPPORT = 0/' Config.mk
+          cat Config.mk
+          ./makeall clean
+          ./makeall
+          make -C sample/01-gpiosimple
+
       - name: Run Circle standalone build with STDLIB_SUPPORT=1
         run: |
           cd libs/circle
           sed -i 's/STDLIB_SUPPORT.*=.*$/STDLIB_SUPPORT = 1/' Config.mk
-          ( echo -n "EXTRAINCLUDE += -I "; ${{ matrix.config.prefix }}gcc -print-file-name=include) >> Config.mk
           cat Config.mk
           ./makeall clean
           ./makeall
