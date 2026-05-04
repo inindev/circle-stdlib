@@ -362,7 +362,7 @@ fi
 if [ $CLANG -eq 1 ]
 then
     # Suppress warnings when building newlib with LLVM
-    CFLAGS_FOR_TARGET="$CFLAGS_FOR_TARGET -Wno-unused-command-line-argument -Wno-deprecated-non-prototype -Wno-duplicate-decl-specifier"
+    CFLAGS_FOR_TARGET="$CFLAGS_FOR_TARGET -Wno-unused-command-line-argument -Wno-deprecated-non-prototype -Wno-duplicate-decl-specifier -Wno-unknown-pragmas"
     CFLAGS_FOR_TARGET="$CFLAGS_FOR_TARGET -Wno-shift-negative-value -Wno-empty-body"
     export CFLAGS_FOR_TARGET CXXFLAGS_FOR_TARGET="$CFLAGS_FOR_TARGET -nostdinc++"
 else
