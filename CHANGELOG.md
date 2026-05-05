@@ -2,12 +2,13 @@
 
 ## [v20](https://codeberg.org/larchcone/circle-stdlib/releases/tag/v20)
 
-* Optional build with LLVM's libc++ for more complete support of C++ standard library features.
-* Build with LLVM clang/clang++.
+* Optional build with LLVM's libc++ for more complete support of C++ standard library features (new options `--libcxx` and `--libcxx-repo` for `configure`).
+* Build with LLVM `clang`/`clang++` (new options `--clang` and `--aarch64` for `configure`).
+* New `configure` option `--kernel-max-size` to set the maximum size of the kernel image.
 * UDP support in socket functions.
-* Various improvements in socket library implemented.
-* pause() implemented.
-* pipe()/pipe2() support based on Circle's new CPipe class.
+* Various improvements in socket library.
+* `pause()` implemented.
+* `pipe()`/`pipe2()` support based on Circle's new `CPipe` class.
 
 ## [v19.1](https://codeberg.org/larchcone/circle-stdlib/releases/tag/v19.1)
 
