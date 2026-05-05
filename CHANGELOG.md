@@ -2,6 +2,7 @@
 
 ## [v20](https://codeberg.org/larchcone/circle-stdlib/releases/tag/v20)
 
+* Synced with Circle Step [Circle Step 51](https://github.com/rsta2/circle/releases/tag/Step51)
 * Optional build with LLVM's libc++ for more complete support of C++ standard library features (new options `--libcxx` and `--libcxx-repo` for `configure`).
 * Build with LLVM `clang`/`clang++` (new options `--clang` and `--aarch64` for `configure`).
 * New `configure` option `--kernel-max-size` to set the maximum size of the kernel image.
