@@ -5,7 +5,7 @@
 * Optional build with LLVM's libc++ for more complete support of C++ standard library features.
 * Build with LLVM clang/clang++.
 * UDP support in socket functions.
-* Various improvements socket library implemented.
+* Various improvements in socket library implemented.
 * pause() implemented.
 * pipe()/pipe2() support based on Circle's new CPipe class.
 
