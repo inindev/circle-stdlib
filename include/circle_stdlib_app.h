@@ -75,6 +75,10 @@ public:
         }
 
 protected:
+        /// Called immediately after mScreen.Initialize(); override to prepare
+        /// the framebuffer (e.g. clear a terminal cursor) before slower init.
+        virtual void OnScreenInitialized (void) {}
+
         CActLED            mActLED;
         CKernelOptions     mOptions;
         CDeviceNameService mDeviceNameService;
@@ -112,6 +116,8 @@ public:
                 {
                         return false;
                 }
+
+                OnScreenInitialized ();
 
                 if (!mSerial.Initialize (115200))
                 {
