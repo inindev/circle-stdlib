@@ -31,6 +31,7 @@
 
 #include <circle_glue.h>
 #include <cassert>
+#include <new>
 #include <wrap_fatfs.h>
 #include <cstring>
 #include <stdexcept>
@@ -167,9 +168,14 @@ public:
                   mpPartitionName (pPartitionName),
                   mUSBHCI (&mInterrupt, &mTimer, TRUE),
                   mEMMC (&mInterrupt, &mTimer, &mActLED),
-                  mConsole (0, TRUE)
+                  m_pConsole (nullptr)
         {
                 assert (mpPartitionName != nullptr);
+        }
+
+        virtual ~CStdlibAppStdio (void)
+        {
+                DestroyConsole ();
         }
 
         virtual bool Initialize (void)
@@ -205,13 +211,15 @@ public:
                         return false;
                 }
 
-                if (!mConsole.Initialize ())
+                CreateConsole ();
+
+                if (!GetConsole ().Initialize ())
                 {
                         return false;
                 }
 
                 // Initialize newlib stdio with a reference to Circle's console
-                CGlueStdioInit (mConsole);
+                CGlueStdioInit (GetConsole ());
 
                 mLogger.Write (GetKernelName (), LogNotice, "Compile time: " __DATE__ " " __TIME__);
 
@@ -231,10 +239,50 @@ public:
         }
 
 protected:
+        /// Return non-null input and output devices to route stdio away from
+        /// the default screen/USB keyboard console.
+        virtual CDevice *GetStdioInputDevice (void)  { return nullptr; }
+        virtual CDevice *GetStdioOutputDevice (void) { return nullptr; }
+
+        CConsole &GetConsole (void) const
+        {
+                assert (m_pConsole != nullptr);
+                return *m_pConsole;
+        }
+
         CUSBHCIDevice   mUSBHCI;
         CEMMCDevice     mEMMC;
         FATFS           mFileSystem;
-        CConsole        mConsole;
+
+private:
+        void CreateConsole (void)
+        {
+                assert (m_pConsole == nullptr);
+
+                CDevice *pIn  = GetStdioInputDevice ();
+                CDevice *pOut = GetStdioOutputDevice ();
+
+                if (pIn != nullptr && pOut != nullptr)
+                {
+                        m_pConsole = new (mConsoleStorage) CConsole (pIn, pOut);
+                }
+                else
+                {
+                        m_pConsole = new (mConsoleStorage) CConsole (0, TRUE);
+                }
+        }
+
+        void DestroyConsole (void)
+        {
+                if (m_pConsole != nullptr)
+                {
+                        m_pConsole->~CConsole ();
+                        m_pConsole = nullptr;
+                }
+        }
+
+        alignas (CConsole) unsigned char mConsoleStorage[sizeof (CConsole)];
+        CConsole *m_pConsole;
 };
 
 /**
