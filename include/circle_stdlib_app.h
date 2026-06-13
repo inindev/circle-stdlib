@@ -101,6 +101,17 @@ public:
         CStdlibAppScreen(const char *kernel)
                 : CStdlibApp (kernel),
                   mScreen (mOptions.GetWidth (), mOptions.GetHeight ()),
+                  // Interrupt-driven serial: with an interrupt system the TX path
+                  // uses a ring buffer and DROPS bytes when full, instead of the
+                  // polling driver's busy-wait on a full FIFO. That busy-wait hangs
+                  // forever if the receiver goes away mid-session (serial monitor
+                  // unplugged), which freezes whichever core is logging -- on this
+                  // build core 0, taking USB-HID polling and the CD prefetch with
+                  // it. Dropping log bytes is the right tradeoff for a possibly-
+                  // absent console. (mInterrupt is a base-class member, fully
+                  // constructed before this; it is Initialize()'d in
+                  // CStdlibApp::Initialize(), which runs before mSerial.Initialize().)
+                  mSerial (&mInterrupt),
                   mTimer (&mInterrupt),
                   mLogger (mOptions.GetLogLevel (), &mTimer)
         {
