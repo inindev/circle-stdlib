@@ -1,6 +1,7 @@
 [submodule "libs/circle"]
 	path = libs/circle
-	url = https://github.com/rsta2/circle.git
+	url = https://github.com/inindev/circle.git
+	branch = inindev
 [submodule "libs/circle-newlib"]
 	path = libs/circle-newlib
 	url = https://github.com/smuehlst/circle-newlib.git
